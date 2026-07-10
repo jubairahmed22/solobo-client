@@ -21,7 +21,7 @@ import { catalogApi } from "@/lib/api/catalog";
 import { catalogKeys } from "@/hooks/useCatalog";
 import type { CategoryTreeNode } from "@/types/catalog";
 
-
+asdfasd
 export interface NavbarProps {
   categories?: CategoryNode[];
   brands?: BrandLite[];
