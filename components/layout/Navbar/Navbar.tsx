@@ -24,7 +24,7 @@ import type { CategoryTreeNode } from "@/types/catalog";
 export interface NavbarProps {
   categories?: CategoryNode[];
   brands?: BrandLite[];
-}
+}asdfasfd
 
 export function Navbar({ categories: ssrCategories, brands: ssrBrands }: NavbarProps) {
   const router = useRouter();
