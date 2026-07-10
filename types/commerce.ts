@@ -239,7 +239,10 @@ export interface DecideReturnInput {
 export interface Order {
   _id: string;
   orderNumber: string;
-  user: string;
+  /** Absent on guest-checkout orders. */
+  user?: string;
+  /** True when the order was placed without an account. */
+  isGuest?: boolean;
   email?: string;
   items: OrderItem[];
   shippingAddress: Address;
@@ -314,5 +317,21 @@ export interface CheckoutInput {
   customerNote?: string;
   saveAddress?: boolean;
   /** Marketing attribution snapshot; persisted on the order + user server-side. */
+  attribution?: CheckoutAttribution;
+}
+
+/**
+ * Guest checkout - no account, no server cart. Sends the local cart lines
+ * (same shape as the login-merge payload) plus an inline shipping address.
+ * The server re-prices every line; nothing money-shaped is trusted here.
+ */
+export interface GuestCheckoutInput {
+  items: MergeCartItem[];
+  shippingAddress: AddressInput;
+  billingAddress?: AddressInput;
+  paymentMethod: PaymentMethod;
+  /** Optional contact email for the order confirmation. */
+  email?: string;
+  customerNote?: string;
   attribution?: CheckoutAttribution;
 }

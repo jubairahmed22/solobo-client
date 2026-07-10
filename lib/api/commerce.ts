@@ -10,6 +10,7 @@ import type {
   Order,
   OrderListQuery,
   CheckoutInput,
+  GuestCheckoutInput,
   OrderStatus,
   PaymentStatus,
   RequestReturnInput,
@@ -85,6 +86,10 @@ export const addressApi = {
 export const orderApi = {
   checkout: (input: CheckoutInput) =>
     unwrap<Order>(apiClient.post("/orders/checkout", input)),
+
+  /** Guest checkout - public endpoint, no auth token required. */
+  guestCheckout: (input: GuestCheckoutInput) =>
+    unwrap<Order>(apiClient.post("/orders/guest-checkout", input)),
 
   list: (params?: OrderListQuery) =>
     unwrapWithMeta<Order[]>(apiClient.get("/orders", { params })),

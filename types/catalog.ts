@@ -140,6 +140,13 @@ export interface ProductSummary {
   category: CategorySummary | string;
   brand?: BrandSummary | string;
   activeOffer?: ProductActiveOffer;
+  /**
+   * List responses ship the full variant array (the list endpoint doesn't
+   * narrow fields), so cards can detect "needs a size/option choice" and
+   * route to the PDP instead of adding a variant-less line that checkout
+   * would reject with VARIANT_REQUIRED.
+   */
+  variants?: ProductVariant[];
 }
 
 export interface ProductDetail extends Omit<ProductSummary, "category"> {

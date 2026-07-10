@@ -112,7 +112,7 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <div className="flex min-h-screen flex-col bg-paper text-ink">
       <Navbar />
-      <main className="container-screen flex-1 py-4 sm:py-6">
+      <main className="mx-auto w-full flex-1 px-2 py-4 sm:py-6 lg:w-[82%] lg:max-w-none lg:px-0">
         <Breadcrumb items={crumbs} />
         <ProductDetailClient product={product} customizationConfig={customizationConfig} siteSettings={settings} className="mt-2" />
         <ProductInfoSections product={product} settings={settings} className="mt-4" />

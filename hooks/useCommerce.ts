@@ -6,6 +6,7 @@ import type {
   AddCartItemInput,
   AddressInput,
   CheckoutInput,
+  GuestCheckoutInput,
   DecideReturnInput,
   MergeCartItem,
   OrderListQuery,
@@ -143,6 +144,13 @@ export function useCheckout() {
       qc.invalidateQueries({ queryKey: commerceKeys.cart });
       qc.invalidateQueries({ queryKey: ["commerce", "orders"] });
     },
+  });
+}
+
+/** Guest checkout - no auth. The local cart lines go straight to the order. */
+export function useGuestCheckout() {
+  return useMutation({
+    mutationFn: (input: GuestCheckoutInput) => orderApi.guestCheckout(input),
   });
 }
 

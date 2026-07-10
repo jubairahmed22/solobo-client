@@ -420,7 +420,7 @@ export function ReviewsSection({
     <section className={cn("flex flex-col gap-5", className)} id="reviews">
       <header className="flex flex-wrap items-end justify-between gap-1">
         <div>
-          <h2 className="text-xl font-bold text-ink">Customer reviews</h2>
+          <h2 className="text-base font-bold text-ink sm:text-xl">Customer reviews</h2>
           <p className="text-sm text-neutral-600">
             What buyers are saying about this product.
           </p>

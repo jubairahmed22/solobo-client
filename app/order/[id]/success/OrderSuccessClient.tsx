@@ -2,19 +2,42 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { CheckCircle2, Package } from "lucide-react";
 import { Spinner } from "@/components/ui";
 import { buttonVariants } from "@/components/ui/Button";
 import { useOrder } from "@/hooks/useCommerce";
 import { trackPurchase } from "@/lib/analytics";
 import { formatPrice, formatDateTime } from "@/lib/utils/format";
+import type { Order } from "@/types/commerce";
 
 export interface OrderSuccessClientProps {
   orderId: string;
 }
 
 export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
-  const { data: order, isLoading, isError } = useOrder(orderId);
+  const { status } = useSession();
+  const isAuthed = status === "authenticated";
+
+  // Authed buyers fetch the order from the API. Guests can't (the order
+  // endpoints require a token), so the checkout page stashes the order the
+  // server returned in sessionStorage and we read it back here.
+  const { data: serverOrder, isLoading: serverLoading, isError } = useOrder(
+    isAuthed ? orderId : undefined,
+  );
+  const guestOrder = React.useMemo<Order | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.sessionStorage.getItem(`guest_order_${orderId}`);
+      return raw ? (JSON.parse(raw) as Order) : null;
+    } catch {
+      return null;
+    }
+  }, [orderId]);
+
+  const order = isAuthed ? serverOrder : guestOrder;
+  const isLoading = status === "loading" || (isAuthed && serverLoading);
+  const isGuestOrder = !isAuthed || order?.isGuest === true;
 
   // Fire the purchase conversion exactly once per order. The success page can
   // be refreshed or revisited from order history, so we dedupe via a
@@ -48,6 +71,33 @@ export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
   }
 
   if (isError || !order) {
+    // Guests land here when sessionStorage was cleared (new tab, refresh
+    // after close). The order is still placed - show the number so they can
+    // reference it, instead of a scary error.
+    if (!isAuthed) {
+      return (
+        <section className="mx-auto flex max-w-2xl flex-col items-center gap-3 py-6 text-center">
+          <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border-2 border-green-500 bg-green-50">
+            <CheckCircle2 className="h-7 w-7 text-green-600" aria-hidden />
+          </span>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Thank you for your order!</h1>
+            <p className="text-sm text-neutral-700">
+              Your order <span className="font-semibold">{orderId}</span> has been placed.
+            </p>
+            <p className="text-sm text-neutral-600">
+              Keep this order number for reference. Our delivery team will call you to confirm.
+            </p>
+          </div>
+          <Link
+            href="/all-products"
+            className={buttonVariants({ variant: "primary", size: "md" })}
+          >
+            Continue shopping
+          </Link>
+        </section>
+      );
+    }
     return (
       <div className="mt-4 flex flex-col items-center gap-1 rounded-xl border border-neutral-200 bg-paper py-8 text-center">
         <p className="text-base font-medium">We couldn&apos;t load your order</p>
@@ -73,8 +123,9 @@ export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
           {formatDateTime(order.createdAt)}.
         </p>
         <p className="text-sm text-neutral-600">
-          We&apos;ve emailed a confirmation to {order.email ?? "your inbox"}. You&apos;ll get another
-          update when it ships.
+          {order.email
+            ? `We've emailed a confirmation to ${order.email}. You'll get another update when it ships.`
+            : `We'll reach you at ${a.phone} with delivery updates.`}
         </p>
       </div>
 
@@ -131,20 +182,31 @@ export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Link
-          href={`/account/orders/${order.orderNumber}`}
-          className={buttonVariants({ variant: "primary", size: "md" })}
-        >
-          <Package className="h-4 w-4" />
-          <span className="ml-1.5">Track this order</span>
-        </Link>
+        {!isGuestOrder ? (
+          <Link
+            href={`/account/orders/${order.orderNumber}`}
+            className={buttonVariants({ variant: "primary", size: "md" })}
+          >
+            <Package className="h-4 w-4" />
+            <span className="ml-1.5">Track this order</span>
+          </Link>
+        ) : null}
         <Link
           href="/all-products"
-          className={buttonVariants({ variant: "secondary", size: "md" })}
+          className={buttonVariants({
+            variant: isGuestOrder ? "primary" : "secondary",
+            size: "md",
+          })}
         >
           Continue shopping
         </Link>
       </div>
+      {isGuestOrder ? (
+        <p className="text-xs text-neutral-500">
+          Keep your order number <span className="font-semibold">{order.orderNumber}</span> for
+          reference - our delivery team will call {a.phone} to confirm.
+        </p>
+      ) : null}
     </section>
   );
 }

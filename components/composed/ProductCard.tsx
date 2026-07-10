@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useCartStore } from "@/store/cartStore";
@@ -21,8 +22,12 @@ function fmtPrice(amount: number, currency: string): string {
 }
 
 export function ProductCard({ product, className }: ProductCardProps) {
+  const router = useRouter();
   const hero = product.images[0];
   const href = `/product/${product.slug}`;
+  // Variant products (sizes etc.) can't be added blind - checkout rejects
+  // lines without a variantId, so the card routes to the PDP instead.
+  const needsVariantChoice = (product.variants?.length ?? 0) > 0;
   const inWishlist = useWishlistStore((s) => s.has(product._id));
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const addToCart = useCartStore((s) => s.add);
@@ -57,6 +62,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (outOfStock) return;
+    if (needsVariantChoice) {
+      // Size/option products go through the PDP picker.
+      toast({ title: "Choose your options", description: "Pick a size to add this item" });
+      router.push(href);
+      return;
+    }
     addToCart({
       productId: product._id,
       slug: product.slug,

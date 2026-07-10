@@ -977,11 +977,11 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
         - md:     same 2-col, narrower info column
         - mobile: [Gallery] → [Info + CTA] stacked, sticky add-to-bag bar
       */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-3 md:gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
 
         {/* ── GALLERY (col 1 — large, sticky) ─────────────────────────── */}
         <div className="md:sticky md:top-4 md:self-start">
-          <div className="-mx-4 sm:mx-0 flex gap-2 sm:gap-3">
+          <div className="-mx-2 sm:mx-0 flex gap-2 sm:gap-3">
 
             {/* Vertical thumbnail rail (sm+) */}
             {product.images.length > 1 ? (
@@ -1091,7 +1091,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
 
               {/* Horizontal thumbnail strip - mobile only */}
               {product.images.length > 1 ? (
-                <ul className="mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:hidden sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <ul className="mt-2 flex gap-1.5 overflow-x-auto px-2 pb-1 sm:hidden sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {product.images.map((img, i) => (
                     <li key={img._id ?? i} className="shrink-0">
                       <button
@@ -1120,7 +1120,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
         </div>
 
         {/* ── PRODUCT INFO (col 2) ─────────────────────────────────────── */}
-        <div className="flex min-w-0 flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-3 sm:gap-5">
 
           {/* Collection · Title + Price · Rating — Barca-style header */}
           <div className="flex flex-col gap-2">
@@ -1133,12 +1133,12 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
               </Link>
             ) : null}
 
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="min-w-0 flex-1 text-[1.4rem] font-bold leading-[1.2] tracking-tight text-ink sm:text-[1.65rem]">
+            <div className="flex items-start justify-between gap-3 sm:gap-4">
+              <h1 className="min-w-0 flex-1 text-[1.1rem] font-bold leading-[1.25] tracking-tight text-ink sm:text-[1.65rem] sm:leading-[1.2]">
                 {product.title}
               </h1>
               <div className="flex shrink-0 flex-col items-end pt-0.5">
-                <span className="whitespace-nowrap text-xl font-bold tracking-tight text-ink sm:text-[1.35rem]">
+                <span className="whitespace-nowrap text-[1.05rem] font-bold tracking-tight text-ink sm:text-[1.35rem]">
                   {formatPrice(totalPrice, product.currency)}
                 </span>
                 {onSale ? (
@@ -1185,12 +1185,12 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
 
           {/* ③ Short description */}
           {product.shortDescription ? (
-            <p className="text-sm leading-relaxed text-neutral-500">{product.shortDescription}</p>
+            <p className="text-[13px] leading-relaxed text-neutral-500 sm:text-sm">{product.shortDescription}</p>
           ) : null}
 
           {/* Variant pickers */}
           {optionAxes.length > 0 ? (
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-3 sm:gap-5">
               {optionAxes.map(([axis, values]) => {
                 const isSizeAxis = axis.toLowerCase().includes("size");
                 return (
@@ -1224,7 +1224,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
                             type="button"
                             onClick={() => onSelectOption(axis, v)}
                             className={cn(
-                              "inline-flex h-11 min-w-[52px] items-center justify-center rounded-md border px-4 text-sm font-semibold transition-all duration-150",
+                              "inline-flex h-[40px] min-w-[44px] items-center justify-center rounded-md border px-2 text-[13px] font-semibold transition-all duration-150 sm:h-11 sm:min-w-[52px] sm:px-4 sm:text-sm",
                               active
                                 ? "border-ink bg-ink text-paper"
                                 : "border-neutral-200 text-neutral-700 hover:border-ink",
@@ -1259,7 +1259,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
           ) : null}
 
           {/* Buy block — single column, Barca-style */}
-          <div ref={ctaRef} className="mt-1 border-t border-neutral-100 pt-5 flex flex-col gap-3">
+          <div ref={ctaRef} className="mt-1 border-t border-neutral-100 pt-3 sm:pt-5 flex flex-col gap-2 sm:gap-3">
 
             {/* Stock */}
             {outOfStock ? (
@@ -1325,7 +1325,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
               type="button"
               onClick={onAddToCart}
               disabled={outOfStock}
-              className="flex h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-accent text-sm font-bold uppercase tracking-wide text-paper transition-all hover:bg-accent-dark active:scale-[0.98] disabled:opacity-40"
+              className="flex h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-accent text-[13px] font-bold uppercase tracking-wide text-paper transition-all hover:bg-accent-dark active:scale-[0.98] disabled:opacity-40 sm:h-[52px] sm:text-sm"
             >
               <ShoppingCart className="h-[18px] w-[18px]" aria-hidden />
               {outOfStock ? "Out of Stock" : "Add to Cart"}
@@ -1336,7 +1336,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
               type="button"
               onClick={onBuyNow}
               disabled={outOfStock}
-              className="flex h-[52px] w-full items-center justify-center rounded-lg border-2 border-ink text-sm font-bold uppercase tracking-wide text-ink transition-all hover:bg-ink hover:text-paper active:scale-[0.98] disabled:opacity-40"
+              className="flex h-[46px] w-full items-center justify-center rounded-lg border-2 border-ink text-[13px] font-bold uppercase tracking-wide text-ink transition-all hover:bg-ink hover:text-paper active:scale-[0.98] disabled:opacity-40 sm:h-[52px] sm:text-sm"
             >
               Buy Now
             </button>
@@ -1379,7 +1379,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
             <div>
               <div
                 className={cn(
-                  "relative overflow-hidden text-sm leading-relaxed text-neutral-500 transition-[max-height] duration-500",
+                  "relative overflow-hidden text-[13px] leading-relaxed text-neutral-500 transition-[max-height] duration-500 sm:text-sm",
                   !descExpanded ? "max-h-[76px]" : "max-h-[2000px]",
                 )}
               >
@@ -1428,7 +1428,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
           ctaEverVisible && !ctaVisible && !bottomPassed ? "translate-y-0" : "translate-y-full",
         )}
       >
-        <div className="container-screen flex items-center gap-2 pt-[12px]" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+        <div className="mx-auto flex w-full items-center gap-2 px-2 pt-[12px]" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
           {heroImage ? (
             <div className="relative h-[40px] w-[40px] shrink-0 overflow-hidden rounded-lg border border-neutral-200">
               <Image src={heroImage.url} alt="" fill sizes="40px" className="object-cover" />

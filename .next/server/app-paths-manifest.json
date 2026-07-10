@@ -1,1 +1,9 @@
-{}
+{
+  "/page": "app/page.js",
+  "/cart/page": "app/cart/page.js",
+  "/checkout/page": "app/checkout/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/product/[slug]/page": "app/product/[slug]/page.js",
+  "/order/[id]/success/page": "app/order/[id]/success/page.js",
+  "/admin/orders/[id]/page": "app/admin/orders/[id]/page.js"
+}

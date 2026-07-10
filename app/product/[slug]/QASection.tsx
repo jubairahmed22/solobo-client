@@ -389,7 +389,7 @@ export function QASection({ productId, sellerId, className }: QASectionProps) {
     <section className={cn("flex flex-col gap-4", className)} id="qa">
       <header className="flex flex-wrap items-end justify-between gap-1">
         <div>
-          <h2 className="text-xl font-bold text-ink">Questions & answers</h2>
+          <h2 className="text-base font-bold text-ink sm:text-xl">Questions & answers</h2>
           <p className="text-sm text-neutral-600">
             Ask the seller anything about this product.
           </p>

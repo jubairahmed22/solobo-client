@@ -20,6 +20,7 @@ import {
   useServerCart,
   useAddresses,
   useCheckout,
+  useGuestCheckout,
   useMergeCart,
   useUpdateCartItem,
   useRemoveCartItem,
@@ -41,6 +42,7 @@ import type {
 const addressFormSchema = z.object({
   fullName: z.string().min(2, "Full name is required").max(120),
   phone: z.string().min(5, "Phone number is required").max(20),
+  email: z.string().email("Enter a valid email").max(200).optional().or(z.literal("")),
   altPhone: z.string().max(20).optional().or(z.literal("")),
   line1: z.string().min(3, "Address is required").max(200),
   line2: z.string().max(200).optional().or(z.literal("")),
@@ -165,12 +167,8 @@ export function CheckoutClient() {
   const { data: publicSettings } = usePublicSiteSettings();
   const deliveryConfig = publicSettings?.delivery;
 
-  // Redirect anon users to sign in once we know they're not authed.
-  React.useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login?next=/checkout");
-    }
-  }, [status, router]);
+  // Guests check out without an account - they just fill in the address
+  // form and place the order. No login redirect.
 
   // The cart query returns a CartEnvelope ({ cart, appliedCoupon, couponError }).
   // We pull the slice plus the resolved discount so the summary can render
@@ -183,6 +181,7 @@ export function CheckoutClient() {
   const couponError = envelope?.couponError ?? null;
   const { data: addresses, isLoading: addrLoading } = useAddresses(isAuthed);
   const checkoutMut = useCheckout();
+  const guestCheckoutMut = useGuestCheckout();
   const mergeMut = useMergeCart();
 
   // Local-cart fallback. If the server cart is empty (or still loading the
@@ -228,6 +227,7 @@ export function CheckoutClient() {
     defaultValues: {
       fullName: "",
       phone: "",
+      email: "",
       altPhone: "",
       line1: "",
       line2: "",
@@ -272,8 +272,64 @@ export function CheckoutClient() {
     );
   }
 
+  const toAddressInput = (values: AddressFormValues): AddressInput => ({
+    fullName: values.fullName,
+    phone: values.phone,
+    altPhone: values.altPhone || undefined,
+    line1: values.line1,
+    line2: values.line2 || undefined,
+    city: values.city,
+    district: values.district,
+    division: values.division || undefined,
+    postalCode: values.postalCode || undefined,
+    country: values.country || "BD",
+  });
+
   const onSubmit = async (values: AddressFormValues) => {
     try {
+      // ── Guest path: no account, no server cart. The local cart lines go
+      // straight to the public guest-checkout endpoint - the buyer just
+      // fills the form and the order is placed. ──
+      if (!isAuthed) {
+        if (localItems.length === 0) {
+          toast({ title: "Your cart is empty", tone: "error" });
+          return;
+        }
+        // Unlike the merge payload, keep the full options map alongside the
+        // variantId so jersey personalisation (Name/Number/Patches) survives
+        // onto the order snapshot.
+        const guestItems: MergeCartItem[] = localItems.map((it) => ({
+          productId: it.productId,
+          variantId: it.variantId,
+          qty: it.qty,
+          options:
+            it.options && Object.keys(it.options).length > 0 ? it.options : undefined,
+        }));
+
+        const order = await guestCheckoutMut.mutateAsync({
+          items: guestItems,
+          shippingAddress: toAddressInput(values),
+          paymentMethod,
+          email: values.email || undefined,
+          customerNote: customerNote || undefined,
+          attribution: getCheckoutAttribution(),
+        });
+
+        clearLocal();
+        // Stash the order so the success page can render it without auth.
+        try {
+          window.sessionStorage.setItem(
+            `guest_order_${order.orderNumber}`,
+            JSON.stringify(order),
+          );
+        } catch {
+          /* storage blocked - success page falls back to a generic message */
+        }
+        toast({ title: "Order placed", description: order.orderNumber, tone: "success" });
+        router.push(`/order/${order.orderNumber}/success`);
+        return;
+      }
+
       // If we're rendering from the local cart, push it up to the server
       // first so the checkout controller has the right line items to charge
       // against. The merge endpoint reports per-item skips (deleted product,
@@ -340,20 +396,8 @@ export function CheckoutClient() {
           attribution,
         };
       } else {
-        const inline: AddressInput = {
-          fullName: values.fullName,
-          phone: values.phone,
-          altPhone: values.altPhone || undefined,
-          line1: values.line1,
-          line2: values.line2 || undefined,
-          city: values.city,
-          district: values.district,
-          division: values.division || undefined,
-          postalCode: values.postalCode || undefined,
-          country: values.country || "BD",
-        };
         body = {
-          shippingAddress: inline,
+          shippingAddress: toAddressInput(values),
           paymentMethod,
           customerNote: customerNote || undefined,
           saveAddress: values.saveAddress,
@@ -375,8 +419,10 @@ export function CheckoutClient() {
   };
 
   // When the user picks a saved address, skip RHF validation and just submit.
+  // Guests always go through form validation - the address form is their
+  // only path.
   const handlePlaceOrder = () => {
-    if (selectedAddressId && selectedAddressId !== "new") {
+    if (isAuthed && selectedAddressId && selectedAddressId !== "new") {
       onSubmit(form.getValues());
     } else {
       form.handleSubmit(onSubmit)();
@@ -402,6 +448,7 @@ export function CheckoutClient() {
           selectedId={selectedAddressId}
           onSelect={setSelectedAddressId}
           form={form}
+          showEmail={!isAuthed}
         />
 
         <PaymentBlock value={paymentMethod} onChange={setPaymentMethod} enabledMethods={publicSettings?.enabledPaymentMethods} />
@@ -429,7 +476,7 @@ export function CheckoutClient() {
         freeThreshold={freeThreshold}
         total={total}
         onPlaceOrder={handlePlaceOrder}
-        isPlacing={checkoutMut.isPending || mergeMut.isPending}
+        isPlacing={checkoutMut.isPending || guestCheckoutMut.isPending || mergeMut.isPending}
         onUpdateQty={handleUpdateQty}
         onRemove={handleRemove}
       />
@@ -443,7 +490,7 @@ export function CheckoutClient() {
       </div>
       <Button
         onClick={handlePlaceOrder}
-        loading={checkoutMut.isPending || mergeMut.isPending}
+        loading={checkoutMut.isPending || guestCheckoutMut.isPending || mergeMut.isPending}
         size="md"
         className="shrink-0 rounded-xl"
       >
@@ -462,9 +509,11 @@ interface ShippingAddressBlockProps {
   selectedId: string | "new" | null;
   onSelect: (id: string | "new") => void;
   form: ReturnType<typeof useForm<AddressFormValues>>;
+  /** Guests get an optional email field for their order confirmation. */
+  showEmail?: boolean;
 }
 
-function ShippingAddressBlock({ addresses, selectedId, onSelect, form }: ShippingAddressBlockProps) {
+function ShippingAddressBlock({ addresses, selectedId, onSelect, form, showEmail }: ShippingAddressBlockProps) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-paper p-4">
       <h2 className="text-base font-semibold text-ink">Shipping address</h2>
@@ -525,7 +574,11 @@ function ShippingAddressBlock({ addresses, selectedId, onSelect, form }: Shippin
       ) : null}
 
       {(selectedId === "new" || addresses.length === 0) ? (
-        <NewAddressForm form={form} showSaveToggle={addresses.length === 0 ? false : true} />
+        <NewAddressForm
+          form={form}
+          showSaveToggle={addresses.length === 0 ? false : true}
+          showEmail={showEmail}
+        />
       ) : null}
     </section>
   );
@@ -534,9 +587,10 @@ function ShippingAddressBlock({ addresses, selectedId, onSelect, form }: Shippin
 interface NewAddressFormProps {
   form: ReturnType<typeof useForm<AddressFormValues>>;
   showSaveToggle: boolean;
+  showEmail?: boolean;
 }
 
-function NewAddressForm({ form, showSaveToggle }: NewAddressFormProps) {
+function NewAddressForm({ form, showSaveToggle, showEmail }: NewAddressFormProps) {
   const {
     register,
     formState: { errors },
@@ -550,6 +604,16 @@ function NewAddressForm({ form, showSaveToggle }: NewAddressFormProps) {
       <Field label="Phone" error={errors.phone?.message} required>
         <Input {...register("phone")} placeholder="+8801XXXXXXXXX" inputMode="tel" />
       </Field>
+      {showEmail ? (
+        <Field label="Email" error={errors.email?.message} className="sm:col-span-2">
+          <Input
+            {...register("email")}
+            type="email"
+            placeholder="you@example.com (optional - for order confirmation)"
+            inputMode="email"
+          />
+        </Field>
+      ) : null}
       <Field label="Alternate phone" error={errors.altPhone?.message}>
         <Input {...register("altPhone")} placeholder="+8801XXXXXXXXX (optional)" inputMode="tel" />
       </Field>
