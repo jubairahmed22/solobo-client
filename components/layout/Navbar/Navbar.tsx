@@ -25,7 +25,7 @@ export interface NavbarProps {
   categories?: CategoryNode[];
   brands?: BrandLite[];
 }
-asdfasda
+
 export function Navbar({ categories: ssrCategories, brands: ssrBrands }: NavbarProps) {
   const router = useRouter();
   const cartCount = useCartStore((s) => s.count());
