@@ -1,0 +1,33 @@
+﻿{
+  "common": {
+    "appName": "Solobo",
+    "search": "Search",
+    "cart": "Cart",
+    "wishlist": "Wishlist",
+    "login": "Sign in",
+    "register": "Create account",
+    "logout": "Sign out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "empty": "No results"
+  },
+  "nav": {
+    "home": "Home",
+    "allProducts": "All products",
+    "categories": "Collections",
+    "orders": "Orders",
+    "profile": "Profile"
+  },
+  "home": {
+    "heroTitle": "Solobo — Performance Sportswear & Casualwear",
+    "heroSubtitle": "Performance sportswear, activewear & casualwear built for every level — delivered across Bangladesh.",
+    "ctaStart": "Shop now",
+    "ctaDocs": "Explore brands"
+  }
+}

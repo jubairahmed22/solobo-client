@@ -1,0 +1,8 @@
+﻿{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Read(//c/Users/User/Documents/a_projects/Solobo/server/**)"
+    ]
+  }
+}

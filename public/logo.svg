@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Red circle background -->
+  <circle cx="50" cy="50" r="50" fill="#E5332A"/>
+  <!-- Head oval -->
+  <ellipse cx="50" cy="41" rx="21" ry="25" fill="#FFFFFF"/>
+  <!-- Ear/spike top left -->
+  <polygon points="33,22 29,8 42,18" fill="#FFFFFF"/>
+  <!-- Ear/spike top right -->
+  <polygon points="67,22 71,8 58,18" fill="#FFFFFF"/>
+  <!-- Eye sockets (red cutouts) -->
+  <ellipse cx="41" cy="40" rx="6" ry="7" fill="#E5332A"/>
+  <ellipse cx="59" cy="40" rx="6" ry="7" fill="#E5332A"/>
+  <!-- Nose dots -->
+  <circle cx="46" cy="50" r="2.5" fill="#E5332A"/>
+  <circle cx="54" cy="50" r="2.5" fill="#E5332A"/>
+  <!-- Scarf / collar -->
+  <ellipse cx="50" cy="68" rx="23" ry="11" fill="#FFFFFF"/>
+  <ellipse cx="50" cy="63" rx="15" ry="7" fill="#FFFFFF"/>
+  <!-- Scarf stripe lines -->
+  <line x1="33" y1="66" x2="67" y2="66" stroke="#E5332A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="31" y1="71" x2="69" y2="71" stroke="#E5332A" stroke-width="2" stroke-linecap="round"/>
+</svg>
