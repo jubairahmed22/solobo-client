@@ -20,7 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { catalogApi } from "@/lib/api/catalog";
 import { catalogKeys } from "@/hooks/useCatalog";
 import type { CategoryTreeNode } from "@/types/catalog";
-asdfasdf
+
 export interface NavbarProps {
   categories?: CategoryNode[];
   brands?: BrandLite[];
