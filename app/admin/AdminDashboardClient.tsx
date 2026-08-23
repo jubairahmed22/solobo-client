@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import {
   AlertTriangle,
   ArrowRight,
-  ArrowUpRight,
   BadgeDollarSign,
   Boxes,
   MessageSquare,
@@ -17,12 +16,16 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { Button, Spinner } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { AdminDashboardSkeleton } from "@/components/admin/Skeleton";
 import { useAdminStats } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
 import { AdminSalesChart } from "./AdminSalesChart";
 import { cn } from "@/lib/utils/cn";
 import type { AdminRecentOrder, AdminTopProduct } from "@/types/admin";
+
+/* Flowbite primary blue - matches the sales chart line and link accents. */
+const FLOWBITE_BLUE = "#1A56DB";
 
 /* ─────────────── Formatters ─────────────── */
 
@@ -59,93 +62,127 @@ function greeting(): string {
   return "Good evening";
 }
 
-/* ─────────────── KPI tile ─────────────── */
+/* ─────────────── Flowbite card shell ─────────────── */
+
+function Card({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-[8px] border border-gray-200 bg-white shadow-sm",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Flowbite card header - bold title left, blue "View all" link right. */
+function CardHeader({
+  title,
+  subtitle,
+  href,
+  linkLabel,
+}: {
+  title: string;
+  subtitle?: string;
+  href?: string;
+  linkLabel?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-[16px] p-[16px]">
+      <div className="min-w-0">
+        <h2 className="text-[18px] font-bold leading-tight text-gray-900">
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="mt-[2px] text-[13px] font-normal text-gray-500">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {href && linkLabel && (
+        <Link
+          href={href}
+          className="shrink-0 rounded-[8px] px-[8px] py-[6px] text-[14px] font-medium text-[#1A56DB] transition duration-75 hover:bg-gray-100 hover:underline"
+        >
+          {linkLabel}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────── KPI tile ───────────────
+ * Flowbite stat widget: hero number top-left, muted label under it, delta
+ * line with a trend arrow, round icon chip on the right.
+ */
 
 interface KpiTileProps {
   label: string;
   value: string;
   delta?: string;
+  deltaTone?: "up" | "neutral" | "warn";
   subDelta?: string;
   Icon: LucideIcon;
-  iconBg?: string;
-  iconColor?: string;
   href?: string;
-  tone?: "default" | "warn" | "good";
 }
 
 function KpiTile({
   label,
   value,
   delta,
+  deltaTone = "neutral",
   subDelta,
   Icon,
-  iconBg,
-  iconColor,
   href,
-  tone = "default",
 }: KpiTileProps) {
   const body = (
     <div
       className={cn(
-        "group flex flex-col gap-2.5 rounded-sm border bg-paper p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] transition-all duration-150",
-        tone === "warn"
-          ? "border-amber-100 bg-amber-50/60"
-          : tone === "good"
-            ? "border-emerald-100 bg-emerald-50/40"
-            : "border-neutral-200 hover:border-neutral-300 hover:shadow-[0_2px_8px_rgba(0,0,0,0.09)]",
-        href && "cursor-pointer",
+        "flex h-full items-start justify-between gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm transition duration-150",
+        href && "cursor-pointer hover:bg-gray-50",
       )}
     >
-      <div className="flex items-start justify-between">
-        <div
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-sm",
-            iconBg ??
-              (tone === "warn"
-                ? "bg-amber-100"
-                : tone === "good"
-                  ? "bg-emerald-100"
-                  : "bg-neutral-100 group-hover:bg-neutral-200"),
-            iconColor ??
-              (tone === "warn"
-                ? "text-amber-600"
-                : tone === "good"
-                  ? "text-emerald-600"
-                  : "text-neutral-500"),
-          )}
-        >
-          <Icon className="h-4 w-4" aria-hidden />
-        </div>
-        {href && (
-          <ArrowUpRight
-            className="h-3.5 w-3.5 text-neutral-300 transition-colors group-hover:text-neutral-500"
-            aria-hidden
-          />
-        )}
-      </div>
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-          {label}
-        </p>
-        <p className="mt-1 text-[26px] font-bold tabular-nums leading-tight text-ink">
+      <div className="min-w-0">
+        <p className="truncate text-[24px] font-bold leading-none tabular-nums text-gray-900">
           {value}
+        </p>
+        <p className="mt-[8px] truncate text-[14px] font-normal text-gray-500">
+          {label}
         </p>
         {delta && (
           <p
             className={cn(
-              "mt-1.5 text-[11.5px]",
-              tone === "warn" ? "text-amber-600" : "text-neutral-400",
+              "mt-[8px] flex items-center gap-[4px] text-[13px] font-medium",
+              deltaTone === "up"
+                ? "text-green-600"
+                : deltaTone === "warn"
+                  ? "text-yellow-700"
+                  : "text-gray-500",
             )}
           >
-            {delta}
+            {deltaTone === "up" && (
+              <TrendingUp className="h-[14px] w-[14px] shrink-0" aria-hidden />
+            )}
+            <span className="truncate">{delta}</span>
           </p>
         )}
         {subDelta && (
-          <p className="mt-0.5 text-[11.5px] font-medium text-amber-600">
+          <p className="mt-[4px] truncate text-[13px] font-medium text-yellow-700">
             {subDelta}
           </p>
         )}
       </div>
+      <span className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+        <Icon className="h-[20px] w-[20px]" aria-hidden />
+      </span>
     </div>
   );
 
@@ -169,13 +206,13 @@ function AlertBanner({
 }) {
   if (pendingFulfilment === 0 && pendingReviews === 0) return null;
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-[8px]">
       {pendingFulfilment > 0 && (
         <Link
           href="/admin/orders?status=confirmed"
-          className="inline-flex items-center gap-1.5 rounded-sm border border-amber-200 bg-amber-50 px-2.5 py-1 text-[12px] font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+          className="inline-flex items-center gap-[6px] rounded-[6px] bg-yellow-100 px-[10px] py-[4px] text-[12px] font-medium text-yellow-800 transition duration-75 hover:bg-yellow-200"
         >
-          <Truck className="h-3 w-3" aria-hidden />
+          <Truck className="h-[14px] w-[14px]" aria-hidden />
           {pendingFulfilment} order{pendingFulfilment !== 1 ? "s" : ""} awaiting
           fulfilment
         </Link>
@@ -183,9 +220,9 @@ function AlertBanner({
       {pendingReviews > 0 && (
         <Link
           href="/admin/reviews?status=pending"
-          className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 bg-paper px-2.5 py-1 text-[12px] font-semibold text-neutral-600 transition-colors hover:bg-neutral-50"
+          className="inline-flex items-center gap-[6px] rounded-[6px] bg-gray-100 px-[10px] py-[4px] text-[12px] font-medium text-gray-800 transition duration-75 hover:bg-gray-200"
         >
-          <MessageSquare className="h-3 w-3" aria-hidden />
+          <MessageSquare className="h-[14px] w-[14px]" aria-hidden />
           {pendingReviews} review{pendingReviews !== 1 ? "s" : ""} pending
         </Link>
       )}
@@ -193,131 +230,150 @@ function AlertBanner({
   );
 }
 
-/* ─────────────── Recent orders table ─────────────── */
+/* ─────────────── Recent orders card ─────────────── */
 
+/* Flowbite badge recipe: bg-*-100 text-*-800, text-xs font-medium, rounded. */
 const STATUS_STYLES: Record<string, string> = {
-  pending:   "bg-neutral-100 text-neutral-600",
-  confirmed: "bg-blue-50 text-blue-700",
-  packed:    "bg-violet-50 text-violet-700",
-  shipped:   "bg-amber-50 text-amber-700",
-  delivered: "bg-emerald-50 text-emerald-700",
-  cancelled: "bg-red-50 text-red-500",
-  returned:  "bg-neutral-100 text-neutral-500",
+  pending:   "bg-gray-100 text-gray-800",
+  confirmed: "bg-blue-100 text-blue-800",
+  packed:    "bg-purple-100 text-purple-800",
+  shipped:   "bg-yellow-100 text-yellow-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  returned:  "bg-gray-100 text-gray-800",
 };
 
-function RecentOrdersTable({ orders }: { orders: AdminRecentOrder[] }) {
-  if (orders.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-1.5 rounded-sm border border-dashed border-neutral-200 py-10 text-center">
-        <ShoppingBag className="h-6 w-6 text-neutral-200" aria-hidden />
-        <p className="text-[12.5px] text-neutral-400">No orders yet.</p>
-      </div>
-    );
-  }
+function RecentOrdersCard({ orders }: { orders: AdminRecentOrder[] }) {
   return (
-    <div className="overflow-hidden rounded-sm border border-neutral-200 bg-paper shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-neutral-100 bg-neutral-50">
-            <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-              Order
-            </th>
-            <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-              Customer
-            </th>
-            <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-              Total
-            </th>
-            <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-              Status
-            </th>
-            <th className="hidden px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400 md:table-cell">
-              Placed
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-100">
-          {orders.map((o) => (
-            <tr key={o._id} className="transition-colors hover:bg-neutral-50">
-              <td className="px-3 py-2.5">
-                <Link
-                  href={`/admin/orders/${o._id}`}
-                  className="font-mono text-[12px] font-semibold text-ink underline-offset-2 hover:text-accent hover:underline"
+    <Card>
+      <CardHeader
+        title="Recent orders"
+        subtitle="Latest orders across the store"
+        href="/admin/orders"
+        linkLabel="View all"
+      />
+      {orders.length === 0 ? (
+        <div className="flex flex-col items-center gap-[8px] px-[16px] pb-[32px] pt-[16px] text-center">
+          <ShoppingBag className="h-[24px] w-[24px] text-gray-300" aria-hidden />
+          <p className="text-[13px] text-gray-500">No orders yet.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[14px] text-gray-500">
+            <thead className="bg-gray-50 text-[12px] uppercase text-gray-500">
+              <tr>
+                <th scope="col" className="px-[16px] py-[12px] font-medium">
+                  Order
+                </th>
+                <th scope="col" className="px-[16px] py-[12px] font-medium">
+                  Customer
+                </th>
+                <th scope="col" className="px-[16px] py-[12px] font-medium">
+                  Total
+                </th>
+                <th scope="col" className="px-[16px] py-[12px] font-medium">
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="hidden px-[16px] py-[12px] font-medium md:table-cell"
                 >
-                  {o.orderNumber}
-                </Link>
-              </td>
-              <td className="px-3 py-2.5">
-                <p className="text-[13px] font-medium text-ink">
-                  {o.user?.name ?? "-"}
-                </p>
-                {o.user?.email && (
-                  <p className="text-[11px] text-neutral-400">{o.user.email}</p>
-                )}
-              </td>
-              <td className="px-3 py-2.5 tabular-nums text-[13px] font-semibold text-ink">
-                {formatMoney(o.total, o.currency)}
-              </td>
-              <td className="px-3 py-2.5">
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold capitalize",
-                    STATUS_STYLES[o.status] ?? "bg-neutral-100 text-neutral-600",
-                  )}
-                >
-                  {o.status}
-                </span>
-              </td>
-              <td className="hidden px-3 py-2.5 text-[11.5px] text-neutral-400 md:table-cell">
-                {formatDate(o.createdAt)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                  Placed
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {orders.map((o) => (
+                <tr key={o._id} className="bg-white transition duration-75 hover:bg-gray-50">
+                  <td className="px-[16px] py-[12px]">
+                    <Link
+                      href={`/admin/orders/${o._id}`}
+                      className="font-semibold text-gray-900 hover:text-[#1A56DB] hover:underline"
+                    >
+                      {o.orderNumber}
+                    </Link>
+                  </td>
+                  <td className="px-[16px] py-[12px]">
+                    <p className="font-medium text-gray-900">
+                      {o.user?.name ?? "-"}
+                    </p>
+                    {o.user?.email && (
+                      <p className="text-[12px] text-gray-500">{o.user.email}</p>
+                    )}
+                  </td>
+                  <td className="px-[16px] py-[12px] font-semibold tabular-nums text-gray-900">
+                    {formatMoney(o.total, o.currency)}
+                  </td>
+                  <td className="px-[16px] py-[12px]">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium capitalize",
+                        STATUS_STYLES[o.status] ?? "bg-gray-100 text-gray-800",
+                      )}
+                    >
+                      {o.status}
+                    </span>
+                  </td>
+                  <td className="hidden px-[16px] py-[12px] text-[13px] text-gray-500 md:table-cell">
+                    {formatDate(o.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }
 
-/* ─────────────── Top products ─────────────── */
+/* ─────────────── Top products card ─────────────── */
 
-function TopProducts({ products }: { products: AdminTopProduct[] }) {
-  if (products.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-1.5 rounded-sm border border-dashed border-neutral-200 py-10 text-center">
-        <Package className="h-6 w-6 text-neutral-200" aria-hidden />
-        <p className="text-[12.5px] text-neutral-400">No sales yet.</p>
-      </div>
-    );
-  }
+function TopProductsCard({ products }: { products: AdminTopProduct[] }) {
   const max = products[0]?.units ?? 1;
   return (
-    <ul className="divide-y divide-neutral-100 overflow-hidden rounded-sm border border-neutral-200 bg-paper shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-      {products.map((p, rank) => {
-        const pct = (p.units / Math.max(1, max)) * 100;
-        return (
-          <li key={p.productId} className="flex items-center gap-2.5 px-3 py-2.5">
-            <span className="w-5 shrink-0 text-center text-[11px] font-bold tabular-nums text-neutral-300">
-              {rank + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-medium text-ink">
-                {p.title}
-              </p>
-              <div className="mt-1 h-1 overflow-hidden rounded-full bg-neutral-100">
-                <div
-                  className="h-full rounded-full bg-accent transition-all duration-500"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-            <span className="shrink-0 tabular-nums text-[11.5px] font-semibold text-neutral-500">
-              {p.units} {p.units === 1 ? "unit" : "units"}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+    <Card>
+      <CardHeader
+        title="Top sellers"
+        subtitle="Best-selling products by units"
+        href="/admin/products"
+        linkLabel="All products"
+      />
+      {products.length === 0 ? (
+        <div className="flex flex-col items-center gap-[8px] px-[16px] pb-[32px] pt-[16px] text-center">
+          <Package className="h-[24px] w-[24px] text-gray-300" aria-hidden />
+          <p className="text-[13px] text-gray-500">No sales yet.</p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-gray-100 px-[16px] pb-[8px]">
+          {products.map((p, rank) => {
+            const pct = (p.units / Math.max(1, max)) * 100;
+            return (
+              <li key={p.productId} className="flex items-center gap-[12px] py-[12px]">
+                <span className="w-[20px] shrink-0 text-center text-[13px] font-semibold tabular-nums text-gray-400">
+                  {rank + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-medium text-gray-900">
+                    {p.title}
+                  </p>
+                  {/* Flowbite progress bar */}
+                  <div className="mt-[6px] h-[6px] overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, backgroundColor: FLOWBITE_BLUE }}
+                    />
+                  </div>
+                </div>
+                <span className="shrink-0 text-[13px] font-medium tabular-nums text-gray-500">
+                  {p.units} {p.units === 1 ? "unit" : "units"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }
 
@@ -325,90 +381,31 @@ function TopProducts({ products }: { products: AdminTopProduct[] }) {
 
 function QuickActions() {
   const actions = [
-    {
-      href: "/admin/products/new",
-      label: "New product",
-      Icon: Package,
-      iconBg: "bg-neutral-900",
-      iconColor: "text-accent",
-    },
-    {
-      href: "/admin/orders?status=pending",
-      label: "Pending orders",
-      Icon: ShoppingBag,
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-600",
-    },
-    {
-      href: "/admin/reviews?status=pending",
-      label: "Pending reviews",
-      Icon: MessageSquare,
-      iconBg: "bg-neutral-100",
-      iconColor: "text-neutral-600",
-    },
-    {
-      href: "/admin/coupons/new",
-      label: "New coupon",
-      Icon: TrendingUp,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600",
-    },
+    { href: "/admin/products/new", label: "New product", Icon: Package },
+    { href: "/admin/orders?status=pending", label: "Pending orders", Icon: ShoppingBag },
+    { href: "/admin/reviews?status=pending", label: "Pending reviews", Icon: MessageSquare },
+    { href: "/admin/coupons/new", label: "New coupon", Icon: TrendingUp },
   ];
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-      {actions.map(({ href, label, Icon, iconBg, iconColor }) => (
+    <div className="grid grid-cols-2 gap-[16px] sm:grid-cols-4">
+      {actions.map(({ href, label, Icon }) => (
         <Link
           key={href}
           href={href}
-          className="group flex items-center gap-2.5 rounded-sm border border-neutral-200 bg-paper px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-150 hover:border-neutral-300 hover:shadow-[0_2px_6px_rgba(0,0,0,0.08)]"
+          className="group flex items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[12px] shadow-sm transition duration-150 hover:bg-gray-50"
         >
-          <span
-            className={cn(
-              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm transition-transform duration-150 group-hover:scale-105",
-              iconBg,
-              iconColor,
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" aria-hidden />
+          <span className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[8px] bg-gray-100 text-gray-500 transition duration-75 group-hover:text-gray-900">
+            <Icon className="h-[20px] w-[20px]" aria-hidden />
           </span>
-          <span className="min-w-0 truncate text-[12.5px] font-medium text-neutral-700">
+          <span className="min-w-0 truncate text-[14px] font-medium text-gray-900">
             {label}
           </span>
           <ArrowRight
-            className="ml-auto h-3 w-3 shrink-0 text-neutral-300 transition-colors group-hover:text-neutral-500"
+            className="ml-auto h-[16px] w-[16px] shrink-0 text-gray-400 transition duration-75 group-hover:text-gray-900"
             aria-hidden
           />
         </Link>
       ))}
-    </div>
-  );
-}
-
-/* ─────────────── Section header ─────────────── */
-
-function SectionHeader({
-  title,
-  href,
-  linkLabel,
-}: {
-  title: string;
-  href?: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <p className="text-[12px] font-semibold uppercase tracking-widest text-neutral-400">
-        {title}
-      </p>
-      {href && linkLabel && (
-        <Link
-          href={href}
-          className="inline-flex items-center gap-1 text-[12px] font-medium text-neutral-400 transition-colors hover:text-ink"
-        >
-          {linkLabel}
-          <ArrowRight className="h-3 w-3" aria-hidden />
-        </Link>
-      )}
     </div>
   );
 }
@@ -422,11 +419,7 @@ export function AdminDashboardClient() {
   const firstName = (session?.user?.name ?? "").split(" ")[0] || "there";
 
   if (isLoading) {
-    return (
-      <div className="flex h-60 items-center justify-center">
-        <Spinner />
-      </div>
-    );
+    return <AdminDashboardSkeleton />;
   }
 
   if (isError || !data) {
@@ -435,13 +428,13 @@ export function AdminDashboardClient() {
         ? error.message
         : "Couldn't load dashboard stats.";
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper p-10 text-center shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
-        <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-        <p className="text-[13.5px] text-neutral-500">{message}</p>
+      <Card className="flex flex-col items-center gap-[12px] p-[40px] text-center">
+        <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+        <p className="text-[14px] text-gray-500">{message}</p>
         <Button variant="secondary" size="sm" onClick={() => refetch()}>
           Try again
         </Button>
-      </div>
+      </Card>
     );
   }
 
@@ -449,18 +442,18 @@ export function AdminDashboardClient() {
   const pendingFulfilment = data.orders.pendingFulfilment;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
 
       {/* Greeting */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-[12px]">
         <div>
-          <h1 className="text-[22px] font-bold leading-tight text-ink">
+          <h1 className="text-[24px] font-bold leading-tight text-gray-900">
             {greeting()}, {firstName} 👋
           </h1>
-          <p className="mt-0.5 text-[13.5px] text-neutral-500">
+          <p className="mt-[4px] text-[14px] text-gray-500">
             Here's what's happening with your store today.
           </p>
-          <time className="mt-0.5 block text-[12px] text-neutral-400">
+          <time className="mt-[2px] block text-[13px] text-gray-400">
             {new Date().toLocaleDateString(undefined, {
               weekday: "long",
               month: "long",
@@ -476,19 +469,20 @@ export function AdminDashboardClient() {
       </header>
 
       {/* KPI grid */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">
         <KpiTile
-          label="Total revenue"
+          label="Gross revenue"
           value={formatMoney(data.revenue.total, data.revenue.currency)}
           delta={`${formatMoney(data.revenue.recent, data.revenue.currency)} last 30 days`}
+          subDelta={`Delivery excluded · ${formatMoney(data.revenue.deliveryMarginRecent, data.revenue.currency)} delivery margin (30d)`}
           Icon={BadgeDollarSign}
-          iconBg="bg-red-50"
-          iconColor="text-accent"
+          href="/admin/analytics/financial"
         />
         <KpiTile
           label="Orders"
           value={data.orders.total.toLocaleString("en-US")}
           delta={`${data.orders.recent} new this month`}
+          deltaTone={data.orders.recent > 0 ? "up" : "neutral"}
           subDelta={
             pendingFulfilment > 0
               ? `${pendingFulfilment} awaiting fulfilment`
@@ -496,18 +490,14 @@ export function AdminDashboardClient() {
           }
           Icon={ShoppingBag}
           href="/admin/orders"
-          tone={pendingFulfilment > 0 ? "warn" : "default"}
-          iconBg={pendingFulfilment > 0 ? undefined : "bg-neutral-100"}
-          iconColor={pendingFulfilment > 0 ? undefined : "text-neutral-500"}
         />
         <KpiTile
           label="Customers"
           value={data.users.total.toLocaleString("en-US")}
           delta={`+${data.users.recent} this month`}
+          deltaTone={data.users.recent > 0 ? "up" : "neutral"}
           Icon={Users}
           href="/admin/users"
-          iconBg="bg-ink"
-          iconColor="text-accent"
         />
         <KpiTile
           label="Active products"
@@ -515,41 +505,26 @@ export function AdminDashboardClient() {
           delta={`of ${data.products.total} total`}
           Icon={Boxes}
           href="/admin/products"
-          iconBg="bg-neutral-100"
-          iconColor="text-neutral-500"
         />
       </section>
 
+      {/* Sales chart */}
+      <Card className="p-[16px] md:p-[24px]">
+        <AdminSalesChart />
+      </Card>
+
       {/* Quick actions */}
-      <section className="flex flex-col gap-2">
-        <SectionHeader title="Quick actions" />
+      <section>
+        <h2 className="mb-[8px] text-[16px] font-semibold text-gray-900">
+          Quick actions
+        </h2>
         <QuickActions />
       </section>
 
-      {/* Sales chart */}
-      <section className="rounded-sm border border-neutral-200 bg-paper p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-        <AdminSalesChart />
-      </section>
-
       {/* Recent orders + top products */}
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_300px]">
-        <div className="flex flex-col gap-2">
-          <SectionHeader
-            title="Recent orders"
-            href="/admin/orders"
-            linkLabel="View all"
-          />
-          <RecentOrdersTable orders={data.recentOrders} />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <SectionHeader
-            title="Top sellers"
-            href="/admin/products"
-            linkLabel="All products"
-          />
-          <TopProducts products={data.topProducts} />
-        </div>
+      <section className="grid grid-cols-1 items-start gap-[16px] xl:grid-cols-[1fr_320px]">
+        <RecentOrdersCard orders={data.recentOrders} />
+        <TopProductsCard products={data.topProducts} />
       </section>
     </div>
   );

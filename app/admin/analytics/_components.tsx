@@ -2,15 +2,20 @@
 
 import * as React from "react";
 import { AlertTriangle, BarChart3 } from "lucide-react";
-import { Spinner } from "@/components/ui";
+
+import { Skeleton } from "@/components/admin/Skeleton";
 import { cn } from "@/lib/utils/cn";
 import { formatPrice } from "@/lib/utils/format";
 
 /**
  * Shared building blocks for the admin analytics dashboard pages. Kept local
- * to app/admin/analytics so the storefront bundle never pulls them in. All
- * monochrome, on the 8px grid, matching the rest of the admin surface.
+ * to app/admin/analytics so the storefront bundle never pulls them in.
+ * Flowbite palette, matching the admin dashboard: white shadow-sm cards on
+ * gray-200 borders, gray-900/gray-500 text, #1A56DB data marks.
  */
+
+/* Flowbite primary blue - same accent as the dashboard sales chart. */
+const FLOWBITE_BLUE = "#1A56DB";
 
 export const RANGE_WINDOWS = [
   { days: 7, label: "7d" },
@@ -45,20 +50,23 @@ export function ReportHeader({
   onDays: (d: number) => void;
 }) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="flex flex-col gap-0.5">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="text-sm text-neutral-600">{description}</p> : null}
+    <header className="flex flex-col gap-[16px] sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-[4px]">
+        <h1 className="text-[24px] font-bold leading-tight text-gray-900">{title}</h1>
+        {description ? <p className="text-[14px] text-gray-500">{description}</p> : null}
       </div>
-      <div className="flex shrink-0 items-center rounded-sm border border-neutral-200 bg-neutral-50 p-1">
+      {/* Same segmented toggle as the dashboard sales chart */}
+      <div className="inline-flex shrink-0 overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm">
         {RANGE_WINDOWS.map((w) => (
           <button
             key={w.days}
             type="button"
             onClick={() => onDays(w.days)}
             className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-              days === w.days ? "bg-ink text-paper" : "text-neutral-600 hover:bg-neutral-100",
+              "border-l border-gray-200 px-[12px] py-[6px] text-[13px] font-medium transition duration-75 first:border-l-0",
+              days === w.days
+                ? "bg-gray-100 text-gray-900"
+                : "bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900",
             )}
             aria-pressed={days === w.days}
           >
@@ -84,10 +92,19 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={cn("flex flex-col gap-3 rounded-sm border border-neutral-200 bg-paper p-4", className)}>
+    <section
+      className={cn(
+        "flex flex-col gap-3 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm",
+        className,
+      )}
+    >
       {title || action ? (
         <div className="flex items-center justify-between gap-1">
-          {title ? <h2 className="text-sm font-semibold text-ink">{title}</h2> : <span />}
+          {title ? (
+            <h2 className="text-[16px] font-bold leading-tight text-gray-900">{title}</h2>
+          ) : (
+            <span />
+          )}
           {action}
         </div>
       ) : null}
@@ -110,25 +127,28 @@ export function StatCard({
   tone?: "default" | "good" | "warn";
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-sm border border-neutral-200 bg-paper p-4">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+    <div className="flex flex-col rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
       <span
         className={cn(
-          "text-3xl font-bold tabular-nums tracking-tight text-ink",
-          tone === "good" && "text-ink",
-          tone === "warn" && "text-ink",
+          "text-[24px] font-bold leading-none tabular-nums",
+          tone === "good"
+            ? "text-green-600"
+            : tone === "warn"
+              ? "text-yellow-700"
+              : "text-gray-900",
         )}
       >
         {value}
       </span>
-      {sub ? <span className="text-xs text-neutral-400">{sub}</span> : null}
+      <span className="mt-[8px] text-[14px] font-normal text-gray-500">{label}</span>
+      {sub ? <span className="mt-[4px] text-[13px] text-gray-500">{sub}</span> : null}
     </div>
   );
 }
 
 export function StatGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{children}</div>
+    <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">{children}</div>
   );
 }
 
@@ -149,26 +169,32 @@ export function ReportState({
 }) {
   if (isLoading) {
     return (
-      <div className="flex h-40 items-center justify-center">
-        <Spinner />
+      <div className="flex flex-col gap-[10px] py-[8px]" role="status" aria-label="Loading" aria-busy>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-[12px]">
+            <Skeleton className="h-[12px] flex-1" />
+            <Skeleton className="h-[12px] w-[56px] shrink-0" />
+          </div>
+        ))}
+        <span className="sr-only">Loading</span>
       </div>
     );
   }
   if (isError) {
     return (
-      <div className="flex flex-col items-center gap-1 rounded-md border border-neutral-200 py-8 text-center">
-        <AlertTriangle className="h-5 w-5 text-neutral-400" aria-hidden />
-        <p className="text-sm font-medium">Couldn&apos;t load this report</p>
-        <p className="text-xs text-neutral-500">Check that the API is reachable and try again.</p>
+      <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 bg-white py-[32px] text-center">
+        <AlertTriangle className="h-[20px] w-[20px] text-gray-400" aria-hidden />
+        <p className="text-[14px] font-medium text-gray-600">Couldn&apos;t load this report</p>
+        <p className="text-[12px] text-gray-400">Check that the API is reachable and try again.</p>
       </div>
     );
   }
   if (isEmpty) {
     return (
-      <div className="flex flex-col items-center gap-1 rounded-md border border-neutral-200 py-8 text-center">
-        <BarChart3 className="h-5 w-5 text-neutral-400" aria-hidden />
-        <p className="text-sm font-medium">No data in this window yet</p>
-        {emptyHint ? <p className="text-xs text-neutral-500">{emptyHint}</p> : null}
+      <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 bg-white py-[32px] text-center">
+        <BarChart3 className="h-[20px] w-[20px] text-gray-300" aria-hidden />
+        <p className="text-[14px] font-medium text-gray-600">No data in this window yet</p>
+        {emptyHint ? <p className="text-[12px] text-gray-400">{emptyHint}</p> : null}
       </div>
     );
   }
@@ -190,20 +216,24 @@ export function BarList({ rows, empty = "No data" }: { rows: BarRow[]; empty?: s
   }
   const max = rows.reduce((m, r) => Math.max(m, r.value), 0) || 1;
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col gap-[12px]">
       {rows.map((r, i) => (
-        <li key={`${r.label}-${i}`} className="flex flex-col gap-0.5">
-          <div className="flex items-baseline justify-between gap-1 text-sm">
-            <span className="truncate">
+        <li key={`${r.label}-${i}`} className="flex flex-col gap-[4px]">
+          <div className="flex items-baseline justify-between gap-1 text-[14px]">
+            <span className="truncate font-medium text-gray-900">
               {r.label}
-              {r.sub ? <span className="ml-0.5 text-neutral-400">· {r.sub}</span> : null}
+              {r.sub ? <span className="ml-0.5 font-normal text-gray-400">· {r.sub}</span> : null}
             </span>
-            <span className="shrink-0 font-medium tabular-nums">{r.display}</span>
+            <span className="shrink-0 font-medium tabular-nums text-gray-500">{r.display}</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+          {/* Flowbite progress bar - same as the dashboard top-sellers list */}
+          <div className="h-[6px] w-full overflow-hidden rounded-full bg-gray-200">
             <div
-              className="h-full rounded-full bg-accent"
-              style={{ width: `${Math.max(2, (r.value / max) * 100)}%` }}
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.max(2, (r.value / max) * 100)}%`,
+                backgroundColor: FLOWBITE_BLUE,
+              }}
             />
           </div>
         </li>
@@ -229,21 +259,24 @@ export function FunnelChart({
   return (
     <ul className="flex flex-col gap-2">
       {steps.map((s, i) => (
-        <li key={s.label} className="flex flex-col gap-0.5">
-          <div className="flex items-baseline justify-between gap-1 text-sm">
-            <span className="font-medium">{s.label}</span>
-            <span className="tabular-nums text-neutral-600">
+        <li key={s.label} className="flex flex-col gap-[4px]">
+          <div className="flex items-baseline justify-between gap-1 text-[14px]">
+            <span className="font-medium text-gray-900">{s.label}</span>
+            <span className="tabular-nums text-gray-500">
               {formatNum(s.sessions)}
-              <span className="ml-1 text-xs text-neutral-400">
+              <span className="ml-1 text-[12px] text-gray-400">
                 {formatPct(s.rateFromTop)} of top
                 {i > 0 ? ` · ${formatPct(s.rateFromPrev)} step` : ""}
               </span>
             </span>
           </div>
-          <div className="h-4 w-full overflow-hidden rounded-sm bg-neutral-100">
+          <div className="h-[16px] w-full overflow-hidden rounded-[4px] bg-gray-200">
             <div
-              className="flex h-full items-center rounded-sm bg-accent"
-              style={{ width: `${Math.max(3, s.rateFromTop)}%` }}
+              className="flex h-full items-center rounded-[4px]"
+              style={{
+                width: `${Math.max(3, s.rateFromTop)}%`,
+                backgroundColor: FLOWBITE_BLUE,
+              }}
             />
           </div>
         </li>
@@ -354,11 +387,10 @@ export function TrendChart({
         role="img"
         aria-label={label ?? "Trend"}
       >
-        <path d={area} fill="currentColor" className="text-neutral-100" />
-        <path d={line} fill="none" stroke="currentColor" strokeWidth={1.5} className="text-accent" />
+        <path d={area} fill={FLOWBITE_BLUE} fillOpacity={0.12} />
+        <path d={line} fill="none" stroke={FLOWBITE_BLUE} strokeWidth={2} />
       </svg>
     </div>
   );
 }
-
 

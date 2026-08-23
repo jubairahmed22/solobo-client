@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -18,10 +18,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Badge, Button, Input, Label, Spinner } from "@/components/ui";
+import { Button, Input, Label } from "@/components/ui";
+import { AdminFormSkeleton } from "@/components/admin/Skeleton";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
 import { cn } from "@/lib/utils/cn";
 import {
+  MarkdownEditor,
   SeoSection,
   Select,
   type SelectOption,
@@ -42,8 +44,9 @@ import {
   sizeChartToDraft,
   draftToSizeChartInput,
   type SizeChartDraft,
+  VideoUploader,
 } from "@/components/composed";
-import type { UploadedImage } from "@/types/uploads";
+import type { UploadedImage, UploadedVideo } from "@/types/uploads";
 import { useUIStore } from "@/store/uiStore";
 import {
   useAdminCategory,
@@ -53,12 +56,13 @@ import {
 } from "@/hooks/useAdmin";
 import { useBrands, useCategories } from "@/hooks/useCatalog";
 import { AdminError } from "@/lib/api/admin";
+import { flattenCategoryTree } from "@/lib/utils/category";
 import type {
   AdminProductDetail,
   AdminProductPatch,
   AdminProductVariantInput,
 } from "@/types/admin";
-import type { CategorySummary, CategoryTreeNode, SizeChart } from "@/types/catalog";
+import type { CategorySummary, SizeChart } from "@/types/catalog";
 
 /* "" Schema "" */
 
@@ -75,6 +79,9 @@ const schema = z.object({
   description: z.string().trim().max(8000).or(z.literal("")),
   price: z.coerce.number().min(0, "Must be 0 or more"),
   compareAtPrice: z
+    .union([z.coerce.number().min(0), z.literal("")])
+    .transform((v) => (v === "" ? undefined : v)),
+  costPrice: z
     .union([z.coerce.number().min(0), z.literal("")])
     .transform((v) => (v === "" ? undefined : v)),
   stock: z.coerce.number().int().min(0, "Must be 0 or more"),
@@ -100,6 +107,7 @@ function toPatch(
   values: FormOutput,
   attributes: AttributeDraft[],
   images: UploadedImage[],
+  video: UploadedVideo | null,
   variants: VariantDraft[],
   categories: string[],
   sizeChart: SizeChartDraft | null,
@@ -123,6 +131,7 @@ function toPatch(
     description: values.description || undefined,
     price: values.price,
     compareAtPrice: values.compareAtPrice ?? undefined,
+    costPrice: values.costPrice ?? undefined,
     stock: values.stock,
     trackStock: values.trackStock,
     lowStockThreshold: values.lowStockThreshold,
@@ -141,6 +150,8 @@ function toPatch(
         ? values.replacedBy
         : undefined,
     images,
+    // Always sent: null explicitly clears the video on the backend.
+    video: video ?? null,
     variants: draftsToVariantInputs(variants) as AdminProductVariantInput[],
     sizeChart: sizeChartValue,
   };
@@ -168,17 +179,6 @@ function extractCategoryIds(cats: AdminProductDetail["categories"]): string[] {
     .filter(Boolean);
 }
 
-function flattenCategoryTree(nodes: CategoryTreeNode[], prefix = ""): SelectOption[] {
-  const out: SelectOption[] = [];
-  for (const node of nodes) {
-    if (!node.isActive) continue;
-    const label = prefix ? `${prefix} › ${node.name}` : node.name;
-    out.push({ value: node._id, label });
-    if (node.children?.length) out.push(...flattenCategoryTree(node.children, label));
-  }
-  return out;
-}
-
 /* "" Page wrapper "" */
 
 export function ProductEditAdminClient({ slug }: { slug: string }) {
@@ -187,17 +187,13 @@ export function ProductEditAdminClient({ slug }: { slug: string }) {
   const { data: product, isLoading, isError, error, refetch } = useAdminProduct(slug);
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper">
-        <Spinner />
-      </div>
-    );
+    return <AdminFormSkeleton sections={3} sidebarCards={2} />;
   }
 
   if (isError || !product) {
     const message = error instanceof AdminError ? error.message : "Couldn't load product.";
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
+      <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
         <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
         <p className="text-sm text-neutral-500">{message}</p>
         <div className="flex items-center gap-2">
@@ -262,6 +258,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setError,
@@ -277,6 +274,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
       description: product.description ?? "",
       price: product.price,
       compareAtPrice: product.compareAtPrice ?? "",
+      costPrice: product.costPrice ?? "",
       stock: product.stock,
       trackStock: product.trackStock,
       lowStockThreshold: (product as AdminProductDetail & { lowStockThreshold?: number }).lowStockThreshold ?? 5,
@@ -315,6 +313,14 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
   const onImagesChange = (next: UploadedImage[]) => {
     setImages(next);
     setImagesDirty(true);
+  };
+
+  /* Video */
+  const [video, setVideo] = React.useState<UploadedVideo | null>(product.video ?? null);
+  const [videoDirty, setVideoDirty] = React.useState(false);
+  const onVideoChange = (next: UploadedVideo | null) => {
+    setVideo(next);
+    setVideoDirty(true);
   };
 
   /* Variants */
@@ -397,6 +403,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
     isDirty ||
     attributesDirty ||
     imagesDirty ||
+    videoDirty ||
     variantsDirty ||
     categoriesDirty ||
     sizeChartDirty;
@@ -409,6 +416,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
           parsed,
           attributes,
           images,
+          video,
           variants,
           secondaryCategories,
           sizeChart,
@@ -431,6 +439,9 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
       );
       setImagesDirty(false);
 
+      setVideo(updated.video ?? null);
+      setVideoDirty(false);
+
       const updatedCats = extractCategoryIds(updated.categories);
       setSecondaryCategories(updatedCats);
       setCategoriesDirty(false);
@@ -447,6 +458,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
         description: updated.description ?? "",
         price: updated.price,
         compareAtPrice: updated.compareAtPrice ?? "",
+        costPrice: updated.costPrice ?? "",
         stock: updated.stock,
         trackStock: updated.trackStock,
         lowStockThreshold:
@@ -503,25 +515,31 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
   );
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
       {/* Header */}
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-[6px]">
           <Link
             href="/admin/products"
-            className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-ink"
+            className="inline-flex items-center gap-[6px] text-[14px] font-medium text-gray-500 transition duration-75 hover:text-[#1A56DB]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to products
+            <ArrowLeft className="h-[16px] w-[16px]" aria-hidden /> Back to products
           </Link>
-          <h1 className="text-2xl font-semibold text-ink">{product.title}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
-            <Badge variant={product.isActive ? "solid" : "muted"}>
+          <h1 className="text-[24px] font-bold leading-tight text-gray-900">{product.title}</h1>
+          <div className="flex flex-wrap items-center gap-[8px] text-[13px] text-gray-500">
+            {/* Flowbite badges */}
+            <span
+              className={cn(
+                "rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium",
+                product.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800",
+              )}
+            >
               {product.isActive ? "Active" : "Hidden"}
-            </Badge>
+            </span>
             {product.isFeatured ? (
-              <Badge variant="outline" className="gap-1">
-                <Star className="h-3 w-3" aria-hidden /> Featured
-              </Badge>
+              <span className="inline-flex items-center gap-[4px] rounded-[4px] bg-yellow-100 px-[10px] py-[2px] text-[12px] font-medium text-yellow-800">
+                <Star className="h-[12px] w-[12px]" aria-hidden /> Featured
+              </span>
             ) : null}
             <span>·</span>
             <span>
@@ -532,47 +550,53 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
             <span>Seller: {product.seller?.name ?? "-"}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[8px]">
+          {/* Flowbite alternative button */}
           <Link
             href={`/product/${slugDraft || product.slug}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-ink hover:text-ink"
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[16px] text-[14px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
           >
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Preview
+            <ExternalLink className="h-[16px] w-[16px]" aria-hidden /> Preview
           </Link>
-          <Button
+          {/* Flowbite red (destructive) button */}
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={onDelete}
             disabled={remove.isPending || update.isPending}
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[16px] text-[14px] font-medium text-red-600 transition duration-75 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {remove.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
             ) : (
-              <Trash2 className="h-4 w-4" aria-hidden />
+              <Trash2 className="h-[16px] w-[16px]" aria-hidden />
             )}
-            <span className="ml-1.5">Delete</span>
-          </Button>
-          <Button type="submit" size="sm" disabled={!anyDirty || update.isPending}>
+            Delete
+          </button>
+          {/* Flowbite primary button */}
+          <button
+            type="submit"
+            disabled={!anyDirty || update.isPending}
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+          >
             {update.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
             ) : (
-              <Save className="h-4 w-4" aria-hidden />
+              <Save className="h-[16px] w-[16px]" aria-hidden />
             )}
-            <span className="ml-1.5">Save</span>
-          </Button>
+            Save changes
+          </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[1fr_320px]">
         {/* "" Main column "" */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[16px]">
 
           {/* Basics */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Basics</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Basics</h2>
             <Field label="Title" error={errors.title?.message}>
               <Input invalid={!!errors.title} {...register("title")} />
             </Field>
@@ -591,14 +615,20 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
               <Input invalid={!!errors.shortDescription} {...register("shortDescription")} />
             </Field>
             <Field label="Description" error={errors.description?.message}>
-              <textarea rows={6} {...register("description")} className={textareaClass} />
+              <Controller
+                name="description"
+                control={control}
+                render={({ field }) => (
+                  <MarkdownEditor value={field.value} onChange={field.onChange} rows={6} />
+                )}
+              />
             </Field>
           </section>
 
           {/* Photos */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-ink">Photos</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">Photos</h2>
               <span className="text-xs text-neutral-400">{images.length} / 8</span>
             </div>
             <p className="text-sm text-neutral-500">
@@ -611,13 +641,20 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
               max={8}
               hint="Up to 8 images · JPG, PNG, WEBP or AVIF · max 8 MB each"
             />
+            <VideoUploader
+              value={video}
+              onChange={onVideoChange}
+              scope="product"
+              label="Video (optional)"
+              hint="One short demo/promo video · up to 100 MB · MP4 WEBM MOV"
+            />
           </section>
 
           {/* Pricing + Inventory */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-              <h2 className="text-base font-semibold text-ink">Pricing</h2>
-              <Field label={`Price (${product.currency})`} error={errors.price?.message}>
+          <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
+            <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+              <h2 className="text-[18px] font-semibold text-gray-900">Pricing</h2>
+              <Field label={`Selling Price (${product.currency})`} error={errors.price?.message}>
                 <Input
                   type="number"
                   min={0}
@@ -644,10 +681,23 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
                 onSet={(v) => setValue("compareAtPrice", v, { shouldDirty: true })}
                 currency={product.currency}
               />
+              <Field
+                label={`Purchase Cost (${product.currency})`}
+                error={errors.costPrice?.message}
+                hint="What you paid for one unit - admin-only, drives margin reporting. Never shown to customers."
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  invalid={!!errors.costPrice}
+                  {...register("costPrice")}
+                />
+              </Field>
             </section>
 
-            <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-              <h2 className="text-base font-semibold text-ink">Inventory</h2>
+            <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+              <h2 className="text-[18px] font-semibold text-gray-900">Inventory</h2>
               <Field label="Stock" error={errors.stock?.message}>
                 <Input
                   type="number"
@@ -686,9 +736,9 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
           </div>
 
           {/* Variants */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-ink">Variants</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">Variants</h2>
               {variantsCount > 0 ? (
                 <span className="text-xs text-neutral-400">
                   {variantsCount} variants · {variantsStock} total stock
@@ -705,12 +755,13 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
               onVariantsChange={onVariantsChange}
               currency={product.currency}
               max={100}
+              basePrice={Number(priceDraft) || undefined}
             />
           </section>
 
           {/* Attributes */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Attributes &amp; specifications</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Attributes &amp; specifications</h2>
             <p className="text-sm text-neutral-500">
               Industry-standard specs like Fabric, Material, Fit, Technology — or anything custom. Improves search &amp; AI discoverability.
             </p>
@@ -718,10 +769,10 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
           </section>
 
           {/* Size chart */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-baseline gap-3">
-                <h2 className="text-base font-semibold text-ink">Size chart</h2>
+                <h2 className="text-[18px] font-semibold text-gray-900">Size chart</h2>
                 {sizeChart ? (
                   <span className="text-xs text-neutral-400">
                     {sizeChart.rows.length} sizes · {sizeChart.columns.length} measurements
@@ -736,7 +787,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
                       onSizeChartChange(sizeChartToDraft(primaryCategory.sizeChart));
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 px-2.5 py-1.5 text-xs text-neutral-600 hover:border-ink hover:text-ink"
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 px-2.5 py-1.5 text-xs text-neutral-600 hover:bg-gray-100 hover:text-gray-900"
                 >
                   <Ruler className="h-3.5 w-3.5" aria-hidden />
                   Use {primaryCategory.name}&apos;s chart
@@ -762,11 +813,11 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
         </div>
 
         {/* "" Sidebar "" */}
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-[16px]">
 
           {/* Status */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Status</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Status</h2>
             <CheckboxField
               label="Active"
               hint="Hidden products don't appear in storefront listings or search."
@@ -780,8 +831,8 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
           </section>
 
           {/* Lifecycle */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Lifecycle &amp; SEO status</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Lifecycle &amp; SEO status</h2>
             <Field
               label="Status"
               hint={
@@ -816,8 +867,8 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
           </section>
 
           {/* Meta */}
-          <section className="flex flex-col gap-2 rounded-sm border border-neutral-200 bg-paper p-3 text-xs text-neutral-500">
-            <h2 className="text-sm font-semibold text-ink">Meta</h2>
+          <section className="flex flex-col gap-2 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm text-xs text-neutral-500">
+            <h2 className="text-[18px] font-semibold text-gray-900">Meta</h2>
             <div className="flex items-center justify-between">
               <span>Rating</span>
               <span className="tabular-nums text-ink">
@@ -839,8 +890,8 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
           </section>
 
           {/* Organization */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Organization</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Organization</h2>
 
             <Field
               label="Product code (SKU)"
@@ -869,7 +920,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
             </Field>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-neutral-500">Secondary categories</span>
+              <span className="text-[14px] font-medium text-gray-900">Secondary categories</span>
               {secondaryCategories.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {secondaryCategories.map((id) => {
@@ -896,7 +947,7 @@ function ProductEditForm({ product, onDeleted }: ProductEditFormProps) {
               ) : null}
               {availableSecondary.length > 0 ? (
                 <select
-                  className="block w-full rounded-sm border border-neutral-200 bg-paper px-2.5 py-1.5 text-sm text-ink focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1"
+                  className="block w-full rounded-sm border border-neutral-200 bg-paper px-2.5 py-1.5 text-sm text-ink focus:border-[#1A56DB] focus:bg-white focus:outline-none"
                   value=""
                   onChange={(e) => {
                     const id = e.target.value;
@@ -987,7 +1038,7 @@ function DiscountHelper({
       : null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-sm border border-dashed border-neutral-200 bg-neutral-50 px-2.5 py-1.5">
+    <div className="flex flex-wrap items-center gap-1.5 rounded-sm border border-dashed border-gray-300 bg-neutral-50 px-2.5 py-1.5">
       <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">
         Quick discount
       </span>
@@ -997,7 +1048,7 @@ function DiscountHelper({
           onClick={() => { setMode("pct"); setInput(""); }}
           className={cn(
             "px-2 py-0.5 transition-colors",
-            mode === "pct" ? "bg-ink text-paper" : "bg-paper text-neutral-500 hover:text-ink",
+            mode === "pct" ? "bg-[#1A56DB] text-white" : "bg-paper text-neutral-500 hover:text-ink",
           )}
         >
           % off
@@ -1007,7 +1058,7 @@ function DiscountHelper({
           onClick={() => { setMode("amt"); setInput(""); }}
           className={cn(
             "px-2 py-0.5 transition-colors",
-            mode === "amt" ? "bg-ink text-paper" : "bg-paper text-neutral-500 hover:text-ink",
+            mode === "amt" ? "bg-[#1A56DB] text-white" : "bg-paper text-neutral-500 hover:text-ink",
           )}
         >
           {currency === "BDT" ? "Tk" : currency} off
@@ -1020,7 +1071,7 @@ function DiscountHelper({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder={mode === "pct" ? "e.g. 20" : "e.g. 200"}
-        className="w-24 rounded-sm border border-neutral-200 bg-paper px-2 py-0.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-ink"
+        className="w-24 rounded-sm border border-neutral-200 bg-paper px-2 py-0.5 text-xs text-ink focus:border-[#1A56DB] focus:outline-none"
       />
       {preview ? (
         <span className="text-[11px] text-neutral-500">{preview}</span>
@@ -1034,16 +1085,13 @@ function DiscountHelper({
           }
         }}
         disabled={calculated === undefined || !numPrice}
-        className="ml-auto rounded-sm bg-ink px-2 py-0.5 text-[11px] font-medium text-paper transition-colors hover:bg-neutral-800 disabled:opacity-40"
+        className="ml-auto rounded-sm bg-[#1A56DB] px-[10px] py-[4px] text-[11px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:opacity-40"
       >
         Set
       </button>
     </div>
   );
 }
-
-const textareaClass =
-  "block w-full rounded-sm border border-neutral-200 bg-paper px-2.5 py-1.5 text-sm text-ink placeholder:text-neutral-400 focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1";
 
 interface FieldProps {
   label: string;
@@ -1055,7 +1103,7 @@ interface FieldProps {
 function Field({ label, hint, error, children }: FieldProps) {
   return (
     <Label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+      <span className="text-[14px] font-medium text-gray-900">{label}</span>
       {children}
       {error ? (
         <span className="text-xs text-ink">{error}</span>
@@ -1074,7 +1122,7 @@ const CheckboxField = React.forwardRef<
     <input
       ref={ref}
       type="checkbox"
-      className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-ink focus-visible:ring-1 focus-visible:ring-ink focus-visible:ring-offset-1"
+      className="mt-0.5 h-[16px] w-[16px] rounded border-gray-300 accent-[#1A56DB]"
       {...props}
     />
     <span className="flex flex-col gap-0.5">

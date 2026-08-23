@@ -6,7 +6,11 @@ import type {
   AnalyticsFinancial,
   AnalyticsMarketing,
   AnalyticsOverview,
+  CourierEconomicsReport,
+  CustomerMetricsReport,
+  ReconciliationReport,
   ReportParams,
+  SkuProfitabilityReport,
 } from "@/types/analytics";
 
 /**
@@ -30,6 +34,26 @@ function clean(params: ReportParams): Record<string, string | number> {
   return out;
 }
 
+/**
+ * Download a CSV export. Auth is a Bearer token (not just cookies), so a
+ * plain `<a href>` can't carry it - fetch as a blob through the same
+ * authenticated client, then trigger a browser download from an object URL.
+ */
+async function downloadCsv(path: string, params: ReportParams, fallbackName: string): Promise<void> {
+  const res = await apiClient.get(path, { params: clean(params), responseType: "blob" });
+  const disposition = String(res.headers?.["content-disposition"] ?? "");
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const analyticsApi = {
   overview: (params: ReportParams = {}) =>
     unwrap<AnalyticsOverview>(
@@ -51,4 +75,28 @@ export const analyticsApi = {
     unwrap<AnalyticsConversion>(
       apiClient.get("/admin/analytics/conversion", { params: clean(params) }),
     ),
+  skuProfitability: (params: ReportParams = {}) =>
+    unwrap<SkuProfitabilityReport>(
+      apiClient.get("/admin/analytics/sku-profitability", { params: clean(params) }),
+    ),
+  courierEconomics: (params: ReportParams = {}) =>
+    unwrap<CourierEconomicsReport>(
+      apiClient.get("/admin/analytics/courier-economics", { params: clean(params) }),
+    ),
+  customerMetrics: (params: ReportParams = {}) =>
+    unwrap<CustomerMetricsReport>(
+      apiClient.get("/admin/analytics/customers", { params: clean(params) }),
+    ),
+  reconciliation: (params: ReportParams = {}) =>
+    unwrap<ReconciliationReport>(
+      apiClient.get("/admin/analytics/reconciliation", { params: clean(params) }),
+    ),
+  exportFinancialCsv: (params: ReportParams = {}) =>
+    downloadCsv("/admin/analytics/financial/export.csv", params, "financial-summary.csv"),
+  exportSkuProfitabilityCsv: (params: ReportParams = {}) =>
+    downloadCsv("/admin/analytics/sku-profitability/export.csv", params, "sku-profitability.csv"),
+  exportCourierEconomicsCsv: (params: ReportParams = {}) =>
+    downloadCsv("/admin/analytics/courier-economics/export.csv", params, "courier-economics.csv"),
+  exportCustomersCsv: (params: ReportParams = {}) =>
+    downloadCsv("/admin/analytics/customers/export.csv", params, "customers.csv"),
 };

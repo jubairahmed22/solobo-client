@@ -196,7 +196,7 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
           </span>
         </div>
         <Button type="button" variant="secondary" size="sm" onClick={() => onChange(emptyDraft())}>
-          <Ruler className="h-4 w-4" aria-hidden />
+          <Ruler className="h-[16px] w-[16px]" aria-hidden />
           <span className="ml-1.5">Add size chart</span>
         </Button>
       </div>
@@ -368,7 +368,7 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
                           className="rounded-lg p-1.5 text-neutral-400 hover:text-ink"
                           aria-label={`Delete template ${name}`}
                         >
-                          <Trash2 className="h-3 w-3" aria-hidden />
+                          <Trash2 className="h-[12px] w-[12px]" aria-hidden />
                         </button>
                       </div>
                     ))}
@@ -393,7 +393,7 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
                 className="h-8 w-40 text-sm"
               />
               <Button type="button" size="sm" onClick={handleSaveTemplate} disabled={!saveName.trim()}>
-                <Save className="h-4 w-4" aria-hidden />
+                <Save className="h-[16px] w-[16px]" aria-hidden />
               </Button>
               <button
                 type="button"
@@ -405,82 +405,82 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
             </div>
           ) : (
             <Button type="button" variant="secondary" size="sm" onClick={() => setSavePrompt(true)}>
-              <Save className="h-4 w-4" aria-hidden />
+              <Save className="h-[16px] w-[16px]" aria-hidden />
               <span className="ml-1.5">Save as template</span>
             </Button>
           )}
 
-          {/* Remove chart */}
+          {/* Remove chart - Flowbite destructive-outline button */}
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs text-neutral-600 hover:border-ink hover:text-ink"
+            className="inline-flex h-[32px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[12px] text-[13px] font-medium text-red-600 transition duration-75 hover:bg-red-50"
           >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            <Trash2 className="h-[16px] w-[16px]" aria-hidden />
             Remove
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-neutral-200">
-        <table className="min-w-full text-sm">
+      {/* Table - Flowbite: gray-50 header band, compact 32px cell inputs */}
+      <div className="overflow-x-auto rounded-[8px] border border-gray-200">
+        <table className="min-w-full text-[14px]">
           <thead>
-            <tr className="border-b border-neutral-100 bg-neutral-50">
-              <th className="w-24 py-2 pl-4 pr-2 text-left text-xs font-semibold text-neutral-500">
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="w-24 py-[10px] pl-[16px] pr-[8px] text-left text-[12px] font-medium uppercase tracking-wide text-gray-500">
                 Size
               </th>
               {value.columns.map((col, ci) => (
-                <th key={ci} className="py-2 px-2 text-left">
-                  <div className="flex items-center gap-1">
+                <th key={ci} className="px-[8px] py-[10px] text-left">
+                  <div className="flex items-center gap-[4px]">
                     <input
                       value={col}
                       onChange={(e) => renameColumn(ci, e.target.value)}
-                      className="min-w-0 w-24 border-0 bg-transparent text-xs font-semibold text-neutral-600 focus:outline-none focus:border-b focus:border-neutral-300"
+                      className="w-24 min-w-0 border-0 bg-transparent text-[12px] font-medium uppercase tracking-wide text-gray-500 focus:border-b focus:border-gray-300 focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => removeColumn(ci)}
-                      className="shrink-0 text-neutral-300 hover:text-ink"
+                      className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[4px] text-gray-400 transition duration-75 hover:bg-gray-200 hover:text-red-600"
                       aria-label={`Remove column ${col}`}
                     >
-                      <X className="h-3 w-3" aria-hidden />
+                      <X className="h-[12px] w-[12px]" aria-hidden />
                     </button>
                   </div>
                 </th>
               ))}
-              <th className="w-8 py-2 px-2" />
+              <th className="w-8 px-[8px] py-[10px]" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-100">
             {value.rows.map((row) => (
-              <tr key={row._key} className="border-b border-neutral-100 last:border-0">
-                <td className="py-1.5 pl-4 pr-2">
+              <tr key={row._key} className="bg-white transition duration-75 hover:bg-gray-50">
+                <td className="py-[8px] pl-[16px] pr-[8px]">
                   <Input
                     value={row.size}
                     onChange={(e) => setRowSize(row._key, e.target.value)}
                     placeholder="S"
-                    className="h-7 w-20 text-xs font-semibold"
+                    className="h-[32px] w-20 text-[13px] font-semibold focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </td>
                 {row.values.map((val, ci) => (
-                  <td key={ci} className="py-1.5 px-2">
+                  <td key={ci} className="px-[8px] py-[8px]">
                     <Input
                       value={val}
                       onChange={(e) => setRowValue(row._key, ci, e.target.value)}
                       placeholder={`- ${value.unit}`}
-                      className="h-7 w-24 text-xs tabular-nums"
+                      className="h-[32px] w-24 text-[13px] tabular-nums focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </td>
                 ))}
-                <td className="py-1.5 px-2">
+                <td className="px-[8px] py-[8px]">
                   <button
                     type="button"
                     onClick={() => removeRow(row._key)}
-                    className="text-neutral-300 hover:text-ink"
+                    className="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] text-gray-400 transition duration-75 hover:bg-red-100 hover:text-red-600"
                     aria-label="Remove row"
                   >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    <Trash2 className="h-[16px] w-[16px]" aria-hidden />
                   </button>
                 </td>
               </tr>
@@ -492,7 +492,7 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
       {/* Add row + column controls */}
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="secondary" size="sm" onClick={addRow}>
-          <Plus className="h-4 w-4" aria-hidden />
+          <Plus className="h-[16px] w-[16px]" aria-hidden />
           <span className="ml-1.5">Add size</span>
         </Button>
         <div className="flex items-center gap-1.5">
@@ -503,7 +503,7 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
               if (e.key === "Enter") { e.preventDefault(); addColumn(); }
             }}
             placeholder="Column name…"
-            className="h-8 w-36 text-sm"
+            className="h-[32px] w-40 text-[13px] focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           <Button
             type="button"
@@ -512,7 +512,7 @@ export function SizeChartEditor({ value, onChange }: SizeChartEditorProps) {
             onClick={addColumn}
             disabled={!newColName.trim()}
           >
-            <Plus className="h-4 w-4" aria-hidden />
+            <Plus className="h-[16px] w-[16px]" aria-hidden />
             <span className="ml-1.5">Add column</span>
           </Button>
         </div>

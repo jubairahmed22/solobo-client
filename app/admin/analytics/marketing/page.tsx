@@ -46,14 +46,14 @@ export default function MarketingPage() {
 
   const campaignCols: Column<TopCampaign>[] = [
     { header: "Campaign", cell: (r) => r.campaign },
-    { header: "Source", cell: (r) => <span className="text-neutral-600">{r.source}</span> },
+    { header: "Source", cell: (r) => <span className="text-gray-600">{r.source}</span> },
     { header: "Sessions", align: "right", cell: (r) => formatNum(r.sessions) },
     { header: "Conv.", align: "right", cell: (r) => formatNum(r.conversions) },
     { header: "CVR", align: "right", cell: (r) => formatPct(r.conversionRate) },
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       <ReportHeader
         title="Marketing intelligence"
         description="Coupon and offer ROI, and the campaigns converting your traffic."

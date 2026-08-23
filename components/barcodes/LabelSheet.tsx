@@ -4,6 +4,7 @@ import * as React from "react";
 import { Printer } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { LABEL_SIZES, buildSheetHtml, printHtml, type LabelData, type LabelSize } from "@/lib/barcode";
+import { renderSymbology } from "@/lib/labels/engine";
 
 export interface LabelSheetProps {
   labels: LabelData[];
@@ -24,7 +25,7 @@ export function LabelSheet({ labels, defaultSizeId = "sm", className }: LabelShe
 
   const handlePrint = async () => {
     setPrinting(true);
-    // Build SVGs client-side for all labels before printing
+    const { enrichLabels } = await import("@/app/admin/barcodes/enrichLabels");
     const enriched = await enrichLabels(labels, size);
     const html = buildSheetHtml(enriched, size);
     printHtml(html);
@@ -111,36 +112,25 @@ function LabelPreview({
   previewW: number;
   previewH: number;
 }) {
-  const svgRef = React.useRef<SVGSVGElement>(null);
-  const [qrUrl, setQrUrl] = React.useState("");
+  const [svg, setSvg] = React.useState("");
 
   React.useEffect(() => {
-    if (label.format === "QR") {
-      import("qrcode").then((QRCode) =>
-        QRCode.toDataURL(label.barcode, { width: previewW, margin: 1 }).then(setQrUrl),
-      );
-      return;
-    }
-    if (!svgRef.current) return;
     let cancelled = false;
-    import("jsbarcode").then(({ default: JsBarcode }) => {
-      if (cancelled || !svgRef.current) return;
-      try {
-        JsBarcode(svgRef.current, label.barcode, {
-          format: label.format === "UPCA" ? "UPC" : label.format,
-          width: 1,
-          height: Math.max(previewH * 0.4, 12),
-          displayValue: true,
-          fontSize: 6,
-          margin: 2,
-          background: "#fff",
-          lineColor: "#0A0A0A",
-          textMargin: 1,
-        });
-      } catch { /* ignore invalid combos */ }
-    });
-    return () => { cancelled = true; };
-  }, [label, previewW, previewH]);
+    renderSymbology({
+      value: label.barcode,
+      symbology: label.format,
+      heightMM: Math.max(previewH * 0.4, 12) / 2.5, // preview px -> approximate mm for non-nominal symbologies
+    })
+      .then((result) => {
+        if (!cancelled) setSvg(result.svg.replace(/\swidth="[^"]*"/, "").replace(/\sheight="[^"]*"/, ""));
+      })
+      .catch(() => {
+        /* invalid value/format combo - leave preview blank */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [label, previewH]);
 
   return (
     <div
@@ -153,15 +143,14 @@ function LabelPreview({
       >
         {label.title}
       </p>
-      {label.format === "QR" ? (
-        qrUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={qrUrl} alt={label.barcode} style={{ maxHeight: previewH * 0.6 }} />
-        ) : (
-          <div className="flex-1 animate-pulse bg-neutral-100 rounded" style={{ width: previewW * 0.5, height: previewW * 0.5 }} />
-        )
+      {svg ? (
+        <div
+          className="[&_svg]:block [&_svg]:h-auto [&_svg]:max-w-full"
+          style={{ maxHeight: previewH * 0.6 }}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
       ) : (
-        <svg ref={svgRef} style={{ maxWidth: "100%", height: "auto" }} />
+        <div className="flex-1 animate-pulse bg-neutral-100 rounded" style={{ width: previewW * 0.5, height: previewW * 0.5 }} />
       )}
       {label.sku ? (
         <p className="truncate text-neutral-500" style={{ fontSize: Math.max(previewW / 28, 5.5) }}>
@@ -174,37 +163,5 @@ function LabelPreview({
         </p>
       ) : null}
     </div>
-  );
-}
-
-/* ─── Helpers ─── */
-
-async function enrichLabels(labels: LabelData[], size: LabelSize): Promise<LabelData[]> {
-  return Promise.all(
-    labels.map(async (label): Promise<LabelData> => {
-      if (label.format === "QR") {
-        const QRCode = await import("qrcode");
-        const qrDataUrl = await QRCode.toDataURL(label.barcode, { width: size.widthMM * 3, margin: 1 });
-        return { ...label, qrDataUrl };
-      }
-
-      // Render barcode to SVG string
-      const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      const { default: JsBarcode } = await import("jsbarcode");
-      try {
-        JsBarcode(svgEl, label.barcode, {
-          format: label.format === "UPCA" ? "UPC" : label.format,
-          width: 1.5,
-          height: Math.max(size.heightMM * 2, 30),
-          displayValue: true,
-          fontSize: 8,
-          margin: 4,
-          background: "#ffffff",
-          lineColor: "#0A0A0A",
-          textMargin: 2,
-        });
-      } catch { /* invalid combo */ }
-      return { ...label, svgString: svgEl.outerHTML };
-    }),
   );
 }

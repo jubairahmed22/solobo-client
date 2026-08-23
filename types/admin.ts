@@ -26,9 +26,19 @@ export interface AdminProductCounts {
   active: number;
 }
 
+/**
+ * `total`/`recent` are Gross Revenue (item value, discount deducted,
+ * recognised orders only) - delivery charge is NEVER included. See
+ * services/finance.service.ts on the backend for the shared definition.
+ */
 export interface AdminRevenue {
   total: number;
   recent: number;
+  netTotal: number;
+  netRecent: number;
+  deliveryRevenueRecent: number;
+  deliveryMarginRecent: number;
+  grossProfitRecent: number;
   currency: string;
 }
 
@@ -139,7 +149,18 @@ export interface AdminOrderSummary {
     method: string;
   };
   itemCount: number;
+  /** True when any line has a paid customization (name/number print, patches) or a personalisation option. */
+  hasCustomization: boolean;
   shippingDistrict?: string;
+  /**
+   * Contact snapshot from the shipping address - the source of truth for
+   * who the customer is. For walk-in POS orders the `user` FK points at
+   * the cashier, so always prefer these fields for display.
+   */
+  customerName?: string;
+  customerPhone?: string;
+  /** Where the order was taken: storefront checkout or in-person POS. */
+  channel?: "web" | "pos";
   createdAt: string;
   updatedAt: string;
   user: {
@@ -169,6 +190,8 @@ export type AdminOrderSort = "newest" | "oldest" | "total-desc" | "total-asc";
 export interface AdminListOrdersParams {
   status?: OrderStatus | "";
   paymentStatus?: PaymentStatus | "";
+  /** Filter by order source: storefront ("web") or in-person ("pos"). */
+  channel?: "web" | "pos" | "";
   q?: string;
   from?: string;
   to?: string;
@@ -194,14 +217,33 @@ export interface AdminProductRef {
  * (the public listing filters them out) and adds the bits the moderation
  * table needs - current stock, active/featured flags, seller name.
  */
+/** One variant's stock row - size/color/etc. combination, own SKU and stock. */
+export interface AdminProductVariantSummary {
+  _id: string;
+  sku: string;
+  /** e.g. "Size: M, Color: Red" - joined from the variant's options map. */
+  optionsLabel: string;
+  price?: number;
+  compareAtPrice?: number;
+  stock: number;
+  isActive: boolean;
+}
+
 export interface AdminProductSummary {
   _id: string;
   title: string;
   slug: string;
+  /** Product-level SKU (optional) - distinct from each variant's own SKU. */
+  sku?: string;
   price: number;
   compareAtPrice?: number;
   currency: string;
+  /** Raw top-level stock field - variant products don't maintain this, use `currentStock` instead. */
   stock: number;
+  /** Real current stock: `stock` for simple products, sum of variant stock for variant products. */
+  currentStock: number;
+  /** All-time units sold across recognised orders (delivered ∪ returned). */
+  unitsSold: number;
   isActive: boolean;
   isFeatured: boolean;
   ratingAverage: number;
@@ -210,6 +252,8 @@ export interface AdminProductSummary {
   category: AdminProductRef | null;
   brand: AdminProductRef | null;
   seller: AdminProductRef | null;
+  /** Empty when the product has no variants (single-SKU item). */
+  variants: AdminProductVariantSummary[];
   createdAt: string;
   updatedAt: string;
 }
@@ -265,6 +309,28 @@ export interface AdminListProductIdsResponse {
 }
 
 /**
+ * The products page's 4-card KPI strip. Every figure is a real backend
+ * aggregate - there's no purchase-order/stock-intake tracking in this
+ * store, so "units sold" (recognised orders only - delivered ∪ returned,
+ * same scope the dashboard's revenue figures use) stands in for a
+ * "purchased" metric instead of a fabricated one. `currentStock`/
+ * `inventoryValue` treat a variant product's stock as the sum of its
+ * variants' stock. `productsMissingCostPrice` lets the UI caveat
+ * `inventoryValue` instead of silently understating it.
+ */
+export interface AdminInventoryStats {
+  totalProducts: number;
+  /** Products created in the last 30 days. */
+  productsAddedRecent: number;
+  /** Units across recognised orders in the last 30 days. */
+  unitsSoldRecent: number;
+  currentStock: number;
+  inventoryValue: number;
+  productsMissingCostPrice: number;
+  currency: string;
+}
+
+/**
  * Subset of fields the admin edit form mutates. The backend's
  * `updateProductSchema` accepts every {@link ProductDetail} field; we pick
  * the safe ones here so the UI doesn't accidentally clobber
@@ -287,6 +353,8 @@ export interface AdminProductPatch {
   shortDescription?: string;
   price?: number;
   compareAtPrice?: number;
+  /** Unit cost of goods - admin/seller-only, drives margin reporting. Never exposed publicly. */
+  costPrice?: number;
   stock?: number;
   isActive?: boolean;
   isFeatured?: boolean;
@@ -315,8 +383,18 @@ export interface AdminProductPatch {
   sizeChart?: AdminSizeChartInput | null;
   /** Product image gallery - replaces the entire array on save. */
   images?: Array<{ url: string; alt?: string; publicId?: string }>;
+  /** Single product video. Send null to remove it. */
+  video?: AdminProductVideoInput | null;
   /** Variant array - replaces entire subdoc array on save. */
   variants?: AdminProductVariantInput[];
+}
+
+/** Video payload shape shared by create + patch. Mirrors backend `videoInput`. */
+export interface AdminProductVideoInput {
+  url: string;
+  publicId?: string;
+  posterUrl?: string;
+  duration?: number;
 }
 
 /**
@@ -350,6 +428,8 @@ export interface AdminProductCreate {
   shortDescription?: string;
   price: number;
   compareAtPrice?: number;
+  /** Unit cost of goods - admin/seller-only, drives margin reporting. Never exposed publicly. */
+  costPrice?: number;
   stock?: number;
   isActive?: boolean;
   isFeatured?: boolean;
@@ -365,6 +445,8 @@ export interface AdminProductCreate {
   /** Optional product-level code / base SKU. */
   sku?: string;
   images?: Array<{ url: string; alt?: string; publicId?: string }>;
+  /** Single optional product video. */
+  video?: AdminProductVideoInput;
   variants?: AdminProductVariantInput[];
   /** SEO meta title - <title> / og:title. Max 160 chars server-side. */
   metaTitle?: string;
@@ -655,7 +737,13 @@ export interface AdminAddOrderItemInput {
  * intent to be explicit at the API surface.
  */
 export interface AdminUpdateOrderItemInput {
-  qty: number;
+  qty?: number;
+  /**
+   * Replace the line's personalisation (Name / Number / Patches / Print).
+   * Variant axes are preserved server-side; an empty object removes the
+   * personalisation. The line is re-priced by the server.
+   */
+  options?: Record<string, string>;
 }
 
 /**
@@ -673,17 +761,50 @@ export interface AdminPatchOrderCustomerInput {
   shippingAddress?: Partial<AddressInput>;
 }
 
+/* ───────────────────── Pathao courier ─────────────────────
+ * Location lookups mirror pathao.service.ts's shape on the server -
+ * cities/zones/areas, cached there so these reads are cheap. Dispatch/refresh
+ * throw (via AdminError) on failure rather than returning ok:false, matching
+ * every other admin mutation in this file - see admin-delivery.controller.ts.
+ */
+export interface PathaoCity {
+  cityId: number;
+  cityName: string;
+}
+export interface PathaoZone {
+  zoneId: number;
+  zoneName: string;
+}
+export interface PathaoArea {
+  areaId: number;
+  areaName: string;
+  homeDeliveryAvailable: boolean;
+}
+export interface CourierDispatchResult {
+  ok: boolean;
+  consignmentId?: string;
+  reason?: string;
+}
+
 /**
  * One line in the POS create-order payload. Same shape as
  * {@link AdminAddOrderItemInput}; we keep it as a separate alias because
  * the POS surface tends to grow ad-hoc fields (giftMessage, lineNote)
  * that don't belong on the add-line endpoint.
  */
+/** Manual cashier-entered discount - percentage off (0-100) or a flat currency amount off. */
+export interface AdminManualDiscountInput {
+  type: "percentage" | "fixed";
+  value: number;
+}
+
 export interface AdminPosOrderItemInput {
   productId: string;
   variantId?: string;
   qty: number;
   options?: Record<string, string>;
+  /** Per-line discount, applied to the product/variant price only (not customization add-ons). */
+  discount?: AdminManualDiscountInput;
 }
 
 /**
@@ -713,9 +834,16 @@ export interface AdminCreatePosOrderInput {
   shippingAddress: AddressInput;
   items: AdminPosOrderItemInput[];
   paymentMethod: PaymentMethod;
+  /**
+   * Manual delivery-charge override. When present it replaces the
+   * settings-based calculation entirely; 0 = free delivery / pickup.
+   */
+  shippingCost?: number;
   paymentStatus?: "pending" | "paid";
   transactionId?: string;
   couponCode?: string;
+  /** Order-wide manual discount, on top of any per-line discounts and independent of a coupon. */
+  orderDiscount?: AdminManualDiscountInput;
   customerNote?: string;
   internalNotes?: string;
 }

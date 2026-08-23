@@ -164,7 +164,7 @@ export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
               {a.line1}
               {a.line2 ? `, ${a.line2}` : ""}
               <br />
-              {a.city}, {a.district}
+              {a.city ? `${a.city}, ` : ""}{a.district}
               {a.postalCode ? ` ${a.postalCode}` : ""}
               <br />
               {a.phone}

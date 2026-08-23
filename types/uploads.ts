@@ -13,6 +13,9 @@ export type UploadScope =
   | "avatar"
   | "offer";
 
+/** Which Cloudinary endpoint the signed upload targets. */
+export type UploadResourceType = "image" | "video";
+
 export interface UploadSignature {
   signature: string;
   timestamp: number;
@@ -35,6 +38,8 @@ export interface CloudinaryUploadResult {
   format?: string;
   bytes?: number;
   original_filename?: string;
+  /** Video uploads only - length in seconds. */
+  duration?: number;
 }
 
 /**
@@ -49,4 +54,16 @@ export interface UploadedImage {
    * but it's not required by the backend product schema.
    */
   publicId?: string;
+}
+
+/**
+ * The single optional product video. Mirrors the backend Product `video`
+ * subdoc. `posterUrl` is derived from the Cloudinary video URL (first frame
+ * as jpg) so the storefront can show a thumbnail before playback.
+ */
+export interface UploadedVideo {
+  url: string;
+  publicId?: string;
+  posterUrl?: string;
+  duration?: number;
 }

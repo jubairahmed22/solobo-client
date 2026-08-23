@@ -26,7 +26,7 @@ export default function AttributionPage() {
 
   const sourceCols: Column<SourceRow>[] = [
     { header: "Source", cell: (r) => r.source },
-    { header: "Medium", cell: (r) => <span className="text-neutral-600">{r.medium}</span> },
+    { header: "Medium", cell: (r) => <span className="text-gray-600">{r.medium}</span> },
     { header: "Sessions", align: "right", cell: (r) => formatNum(r.sessions) },
     { header: "Conv.", align: "right", cell: (r) => formatNum(r.conversions) },
     { header: "CVR", align: "right", cell: (r) => formatPct(r.conversionRate) },
@@ -42,7 +42,7 @@ export default function AttributionPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       <ReportHeader
         title="Attribution"
         description="Channels, sources and campaigns driving sessions and revenue (first-touch)."
@@ -58,7 +58,7 @@ export default function AttributionPage() {
       >
         {data ? (
           <>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2">
               <Panel title="Sessions by channel">
                 <BarList
                   rows={data.channels.map((c) => ({

@@ -15,6 +15,17 @@ export interface CartVariant {
   color?: string;
 }
 
+/**
+ * One customization charge included in a line's unit `price` - e.g.
+ * `{ label: "Name & number print", amount: 250 }` or a named patch.
+ * Captured at add-to-cart time so the cart can show customers exactly
+ * where the extra cost comes from, even if admin prices change later.
+ */
+export interface CartAddOn {
+  label: string;
+  amount: number;
+}
+
 export interface CartItem {
   productId: string;
   /**
@@ -35,8 +46,12 @@ export interface CartItem {
   slug: string;
   title: string;
   image: string;
-  price: number; // selling price after discount
+  price: number; // selling price after discount, INCLUDING any add-ons
   originalPrice?: number;
+  /** Unit price before customization add-ons. Set only on customized lines. */
+  basePrice?: number;
+  /** Per-unit customization charges included in `price`. */
+  addOns?: CartAddOn[];
   qty: number;
   /** Available inventory at the time of add - used to cap qty locally. May be stale; backend is authoritative. */
   stock?: number;
@@ -72,13 +87,20 @@ function lineKey(
   options?: Record<string, string>,
   legacy?: CartVariant,
 ): string {
-  if (variantId) return `${productId}::v::${variantId}`;
-  if (options && Object.keys(options).length > 0) {
-    const parts = Object.keys(options)
+  const optionsHash = (opts: Record<string, string>) =>
+    Object.keys(opts)
       .sort()
-      .map((k) => `${k}=${options[k]}`)
+      .map((k) => `${k}=${opts[k]}`)
       .join("|");
-    return `${productId}::o::${parts}`;
+  if (variantId) {
+    // Options are hashed in alongside the variant id so the same variant
+    // with different personalization (name/number/patches) stays a
+    // separate cart row instead of silently merging.
+    const suffix = options && Object.keys(options).length > 0 ? `::${optionsHash(options)}` : "";
+    return `${productId}::v::${variantId}${suffix}`;
+  }
+  if (options && Object.keys(options).length > 0) {
+    return `${productId}::o::${optionsHash(options)}`;
   }
   if (legacy && (legacy.size || legacy.color)) {
     return `${productId}::l::${legacy.size ?? ""}::${legacy.color ?? ""}`;

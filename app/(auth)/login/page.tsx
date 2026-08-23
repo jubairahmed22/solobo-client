@@ -127,9 +127,9 @@ export default function LoginPage() {
         <Button variant="secondary" fullWidth size="lg" onClick={() => oauth("google")}>
           Continue with Google
         </Button>
-        <Button variant="secondary" fullWidth size="lg" onClick={() => oauth("facebook")}>
+        {/* <Button variant="secondary" fullWidth size="lg" onClick={() => oauth("facebook")}>
           Continue with Facebook
-        </Button>
+        </Button> */}
       </div>
     </AuthLayout>
   );

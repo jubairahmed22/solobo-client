@@ -19,6 +19,10 @@ export const analyticsKeys = {
   financial: (p: ReportParams) => ["admin", "analytics", "financial", p] as const,
   marketing: (p: ReportParams) => ["admin", "analytics", "marketing", p] as const,
   conversion: (p: ReportParams) => ["admin", "analytics", "conversion", p] as const,
+  skuProfitability: (p: ReportParams) => ["admin", "analytics", "sku-profitability", p] as const,
+  courierEconomics: (p: ReportParams) => ["admin", "analytics", "courier-economics", p] as const,
+  customerMetrics: (p: ReportParams) => ["admin", "analytics", "customers", p] as const,
+  reconciliation: (p: ReportParams) => ["admin", "analytics", "reconciliation", p] as const,
 };
 
 export function useAnalyticsOverview(params: ReportParams = {}) {
@@ -57,6 +61,38 @@ export function useAnalyticsConversion(params: ReportParams = {}) {
   return useQuery({
     queryKey: analyticsKeys.conversion(params),
     queryFn: () => analyticsApi.conversion(params),
+    staleTime: STALE,
+  });
+}
+
+export function useSkuProfitability(params: ReportParams = {}) {
+  return useQuery({
+    queryKey: analyticsKeys.skuProfitability(params),
+    queryFn: () => analyticsApi.skuProfitability(params),
+    staleTime: STALE,
+  });
+}
+
+export function useCourierEconomics(params: ReportParams = {}) {
+  return useQuery({
+    queryKey: analyticsKeys.courierEconomics(params),
+    queryFn: () => analyticsApi.courierEconomics(params),
+    staleTime: STALE,
+  });
+}
+
+export function useCustomerMetrics(params: ReportParams = {}) {
+  return useQuery({
+    queryKey: analyticsKeys.customerMetrics(params),
+    queryFn: () => analyticsApi.customerMetrics(params),
+    staleTime: STALE,
+  });
+}
+
+export function useReconciliation(params: ReportParams = {}) {
+  return useQuery({
+    queryKey: analyticsKeys.reconciliation(params),
+    queryFn: () => analyticsApi.reconciliation(params),
     staleTime: STALE,
   });
 }

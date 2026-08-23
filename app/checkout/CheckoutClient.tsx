@@ -26,6 +26,8 @@ import {
   useRemoveCartItem,
 } from "@/hooks/useCommerce";
 import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
+import { usePublicCustomizations } from "@/hooks/useCustomizations";
+import { deriveAddOns } from "@/lib/utils/cartAddOns";
 import type {
   Address,
   AddressInput,
@@ -46,7 +48,6 @@ const addressFormSchema = z.object({
   altPhone: z.string().max(20).optional().or(z.literal("")),
   line1: z.string().min(3, "Address is required").max(200),
   line2: z.string().max(200).optional().or(z.literal("")),
-  city: z.string().min(1, "City is required").max(80),
   district: z.string().min(1, "District is required").max(80),
   division: z.string().max(80).optional().or(z.literal("")),
   postalCode: z.string().max(20).optional().or(z.literal("")),
@@ -231,7 +232,6 @@ export function CheckoutClient() {
       altPhone: "",
       line1: "",
       line2: "",
-      city: "",
       district: "",
       division: "",
       postalCode: "",
@@ -262,10 +262,10 @@ export function CheckoutClient() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="mt-4 flex flex-col items-center gap-1 rounded-md border border-neutral-200 bg-paper py-8 text-center">
-        <p className="text-base font-medium">Your cart is empty</p>
-        <p className="text-sm text-neutral-600">Add a few items before checking out.</p>
-        <Link href="/all-products" className={buttonVariants({ variant: "primary", size: "md", className: "mt-1" })}>
+      <div className="mt-[24px] flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white px-[24px] py-[56px] text-center shadow-sm">
+        <p className="text-[16px] font-semibold text-gray-900">Your cart is empty</p>
+        <p className="text-[14px] text-gray-500">Add a few items before checking out.</p>
+        <Link href="/all-products" className={buttonVariants({ variant: "accent", size: "md", className: "mt-[4px] rounded-[8px]" })}>
           Browse products
         </Link>
       </div>
@@ -278,7 +278,6 @@ export function CheckoutClient() {
     altPhone: values.altPhone || undefined,
     line1: values.line1,
     line2: values.line2 || undefined,
-    city: values.city,
     district: values.district,
     division: values.division || undefined,
     postalCode: values.postalCode || undefined,
@@ -441,8 +440,10 @@ export function CheckoutClient() {
 
   return (
     <>
-    <div className="mt-3 grid grid-cols-1 gap-3 pb-24 sm:pb-0 md:grid-cols-[1fr_300px] lg:grid-cols-[1fr_360px]">
-      <div className="flex flex-col gap-3">
+    <div className="pb-24 sm:pb-0">
+      <h1 className="text-[20px] font-semibold text-gray-900 sm:text-[24px]">Checkout</h1>
+      <div className="mt-[16px] grid grid-cols-1 items-start gap-[16px] md:grid-cols-[1fr_320px] lg:grid-cols-[1fr_380px]">
+      <div className="flex flex-col gap-[16px]">
         <ShippingAddressBlock
           addresses={addresses ?? []}
           selectedId={selectedAddressId}
@@ -453,15 +454,15 @@ export function CheckoutClient() {
 
         <PaymentBlock value={paymentMethod} onChange={setPaymentMethod} enabledMethods={publicSettings?.enabledPaymentMethods} />
 
-        <section className="flex flex-col gap-2.5 rounded-xl border border-neutral-200 bg-paper p-4">
-          <h2 className="text-base font-semibold text-ink">Order note <span className="text-sm font-normal text-neutral-400">(optional)</span></h2>
+        <section className="flex flex-col gap-2.5 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+          <h2 className="text-[18px] font-semibold text-gray-900">Order note <span className="text-sm font-normal text-gray-400">(optional)</span></h2>
           <textarea
             value={customerNote}
             onChange={(e) => setCustomerNote(e.target.value)}
             placeholder="Anything our delivery team should know?"
             rows={3}
             maxLength={1000}
-            className="w-full rounded-lg border border-neutral-200 bg-paper px-3 py-2.5 text-sm text-ink placeholder:text-neutral-400 focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1"
+            className="w-full rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] py-[10px] text-[14px] text-gray-900 placeholder:text-gray-400 focus:border-[#E5332A] focus:bg-white focus:outline-none"
           />
         </section>
       </div>
@@ -480,21 +481,22 @@ export function CheckoutClient() {
         onUpdateQty={handleUpdateQty}
         onRemove={handleRemove}
       />
+      </div>
     </div>
 
     {/* Mobile sticky place-order bar */}
-    <div className="fixed bottom-0 left-0 right-0 z-30 flex items-center gap-3 border-t border-neutral-200 bg-white px-4 pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+    <div className="fixed bottom-0 left-0 right-0 z-30 flex items-center gap-[12px] border-t border-gray-200 bg-white px-[16px] pt-[12px] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
       <div className="min-w-0 flex-1">
-        <p className="text-xs text-neutral-500">Total</p>
-        <p className="text-base font-bold text-ink">{formatPrice(total, cart.currency)}</p>
+        <p className="text-[12px] text-gray-500">Total</p>
+        <p className="text-[16px] font-bold text-gray-900">{formatPrice(total, cart.currency)}</p>
       </div>
       <Button
         onClick={handlePlaceOrder}
         loading={checkoutMut.isPending || guestCheckoutMut.isPending || mergeMut.isPending}
         size="md"
-        className="shrink-0 rounded-xl"
+        className="shrink-0 rounded-[8px]"
       >
-        <Lock className="h-[14px] w-[14px]" />
+        <Lock className="h-[16px] w-[16px]" />
         <span className="ml-1.5">Place order</span>
       </Button>
     </div>
@@ -515,8 +517,8 @@ interface ShippingAddressBlockProps {
 
 function ShippingAddressBlock({ addresses, selectedId, onSelect, form, showEmail }: ShippingAddressBlockProps) {
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-paper p-4">
-      <h2 className="text-base font-semibold text-ink">Shipping address</h2>
+    <section className="flex flex-col gap-3 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+      <h2 className="text-[18px] font-semibold text-gray-900">Shipping address</h2>
 
       {addresses.length > 0 ? (
         <ul className="flex flex-col gap-2">
@@ -528,29 +530,29 @@ function ShippingAddressBlock({ addresses, selectedId, onSelect, form, showEmail
                   type="button"
                   onClick={() => onSelect(a._id!)}
                   className={cn(
-                    "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors",
-                    active ? "border-ink bg-neutral-50" : "border-neutral-200 hover:border-neutral-400",
+                    "flex w-full items-start gap-3 rounded-[8px] border p-[12px] text-left transition-colors",
+                    active ? "border-accent bg-red-50" : "border-gray-200 hover:border-gray-400",
                   )}
                 >
                   {/* Radio indicator - 18×18 for legible tap feedback */}
                   <span
                     className={cn(
                       "mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2",
-                      active ? "border-ink" : "border-neutral-300",
+                      active ? "border-accent" : "border-gray-300",
                     )}
                   >
-                    {active ? <span className="h-2.5 w-2.5 rounded-full bg-ink" /> : null}
+                    {active ? <span className="h-2.5 w-2.5 rounded-full bg-accent" /> : null}
                   </span>
-                  <div className="flex-1 text-sm">
+                  <div className="flex-1 text-[14px]">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-semibold text-ink">{a.fullName}</span>
+                      <span className="font-semibold text-gray-900">{a.fullName}</span>
                       {a.isDefault ? <Badge variant="outline">Default</Badge> : null}
-                      {a.label ? <span className="text-xs text-neutral-500">{a.label}</span> : null}
+                      {a.label ? <span className="text-xs text-gray-500">{a.label}</span> : null}
                     </div>
-                    <div className="mt-0.5 text-neutral-600">{a.phone}</div>
-                    <div className="text-neutral-600">
+                    <div className="mt-0.5 text-gray-600">{a.phone}</div>
+                    <div className="text-gray-600">
                       {a.line1}
-                      {a.line2 ? `, ${a.line2}` : ""}, {a.city}, {a.district}
+                      {a.line2 ? `, ${a.line2}` : ""}{a.city ? `, ${a.city}` : ""}, {a.district}
                       {a.postalCode ? ` ${a.postalCode}` : ""}, {a.country ?? "BD"}
                     </div>
                   </div>
@@ -563,11 +565,11 @@ function ShippingAddressBlock({ addresses, selectedId, onSelect, form, showEmail
               type="button"
               onClick={() => onSelect("new")}
               className={cn(
-                "inline-flex items-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm font-medium transition-colors",
-                selectedId === "new" ? "border-ink bg-neutral-50 text-ink" : "border-neutral-300 text-neutral-600 hover:border-ink hover:text-ink",
+                "inline-flex items-center gap-2 rounded-[8px] border border-dashed px-[12px] py-[10px] text-[14px] font-medium transition-colors",
+                selectedId === "new" ? "border-accent bg-red-50 text-accent" : "border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-900",
               )}
             >
-              <Plus className="h-[14px] w-[14px]" /> Use a new address
+              <Plus className="h-[16px] w-[16px]" /> Use a new address
             </button>
           </li>
         </ul>
@@ -618,16 +620,13 @@ function NewAddressForm({ form, showSaveToggle, showEmail }: NewAddressFormProps
         <Input {...register("altPhone")} placeholder="+8801XXXXXXXXX (optional)" inputMode="tel" />
       </Field>
       <Field label="Country">
-        <Input value="Bangladesh" readOnly className="cursor-default bg-neutral-50 text-neutral-500" />
+        <Input value="Bangladesh" readOnly className="cursor-default bg-gray-50 text-gray-500" />
       </Field>
       <Field label="Address line 1" error={errors.line1?.message} required className="sm:col-span-2">
         <Input {...register("line1")} placeholder="House, road, area" />
       </Field>
       <Field label="Address line 2" error={errors.line2?.message} className="sm:col-span-2">
         <Input {...register("line2")} placeholder="Apt, floor (optional)" />
-      </Field>
-      <Field label="City" error={errors.city?.message} required>
-        <Input {...register("city")} />
       </Field>
       <Field label="District" error={errors.district?.message} required>
         <Input {...register("district")} placeholder="Dhaka" />
@@ -640,7 +639,7 @@ function NewAddressForm({ form, showSaveToggle, showEmail }: NewAddressFormProps
       </Field>
       {showSaveToggle ? (
         <label className="flex items-center gap-2 text-sm sm:col-span-2">
-          <input type="checkbox" {...register("saveAddress")} className="h-[16px] w-[16px] accent-ink" />
+          <input type="checkbox" {...register("saveAddress")} className="h-[16px] w-[16px] accent-[#E5332A]" />
           Save this address to my address book
         </label>
       ) : null}
@@ -661,7 +660,7 @@ function Field({ label, required, error, className, children }: FieldProps) {
     <div className={cn("flex flex-col gap-0.5", className)}>
       <Label required={required}>{label}</Label>
       {children}
-      {error ? <span className="text-xs text-ink">{error}</span> : null}
+      {error ? <span className="text-[13px] font-medium text-red-600">{error}</span> : null}
     </div>
   );
 }
@@ -691,8 +690,8 @@ function PaymentBlock({ value, onChange, enabledMethods }: PaymentBlockProps) {
   }, [options, value, onChange]);
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-paper p-4">
-      <h2 className="text-base font-semibold text-ink">Payment</h2>
+    <section className="flex flex-col gap-3 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+      <h2 className="text-[18px] font-semibold text-gray-900">Payment</h2>
       <ul className="flex flex-col gap-2">
         {options.map((opt) => {
           const active = value === opt.id;
@@ -702,29 +701,29 @@ function PaymentBlock({ value, onChange, enabledMethods }: PaymentBlockProps) {
                 type="button"
                 onClick={() => onChange(opt.id)}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors",
-                  active ? "border-ink bg-neutral-50" : "border-neutral-200 hover:border-neutral-400",
+                  "flex w-full items-center gap-3 rounded-[8px] border p-[12px] text-left transition-colors",
+                  active ? "border-accent bg-red-50" : "border-gray-200 hover:border-gray-400",
                 )}
               >
                 <span
                   className={cn(
                     "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2",
-                    active ? "border-ink" : "border-neutral-300",
+                    active ? "border-accent" : "border-gray-300",
                   )}
                 >
-                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-ink" /> : null}
+                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-accent" /> : null}
                 </span>
-                <div className="flex-1 text-sm">
-                  <div className="font-semibold text-ink">{opt.label}</div>
-                  <div className="text-xs text-neutral-500">{opt.description}</div>
+                <div className="flex-1 text-[14px]">
+                  <div className="font-semibold text-gray-900">{opt.label}</div>
+                  <div className="text-[12px] text-gray-500">{opt.description}</div>
                 </div>
-                {active ? <CheckCircle2 className="h-[16px] w-[16px] shrink-0 text-ink" /> : null}
+                {active ? <CheckCircle2 className="h-[16px] w-[16px] shrink-0 text-accent" /> : null}
               </button>
             </li>
           );
         })}
       </ul>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-gray-500">
         Mobile-banking and card payments redirect after placing your order. COD requires no online payment.
       </p>
     </section>
@@ -764,13 +763,13 @@ function OrderSummary({
 }: OrderSummaryProps) {
   const isFreeDelivery = freeThreshold > 0 && subtotal >= freeThreshold;
   return (
-    <aside className="flex flex-col gap-3 self-start rounded-xl border border-neutral-200 bg-paper p-4 md:sticky md:top-20">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">Order summary</h2>
+    <aside className="flex flex-col gap-3 self-start rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm md:sticky md:top-20">
+      <h2 className="text-[18px] font-semibold text-gray-900">Order summary</h2>
 
-      <ul className="flex flex-col divide-y divide-neutral-100">
+      <ul className="flex flex-col divide-y divide-gray-100">
         {cart.items.map((it) => (
           <li key={it._id} className="flex items-start gap-2.5 py-2.5 first:pt-0 last:pb-0">
-            <div className="relative h-[44px] w-[44px] shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50">
+            <div className="relative h-[44px] w-[44px] shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
               {it.image ? (
                 <Image src={it.image} alt={it.title} fill sizes="44px" className="object-cover" />
               ) : null}
@@ -778,50 +777,55 @@ function OrderSummary({
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-1">
                 <div className="min-w-0 flex-1">
-                  <div className="line-clamp-2 text-sm font-medium leading-snug text-ink">{it.title}</div>
+                  <div className="line-clamp-2 text-sm font-medium leading-snug text-gray-900">{it.title}</div>
                   {it.options && Object.keys(it.options).length > 0 ? (
-                    <div className="mt-0.5 text-xs text-neutral-500 line-clamp-1">
+                    <div className="mt-0.5 text-xs text-gray-500 line-clamp-1">
                       {Object.entries(it.options).map(([k, v]) => `${k}: ${v}`).join(" · ")}
                     </div>
                   ) : null}
+                  <AddOnBreakdown
+                    price={it.price}
+                    options={it.options}
+                    currency={cart.currency}
+                  />
                 </div>
                 <button
                   type="button"
                   onClick={() => onRemove(it._id)}
-                  className="mt-0.5 shrink-0 rounded p-0.5 text-neutral-400 transition-colors hover:text-accent"
+                  className="mt-0.5 shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:text-accent"
                   aria-label="Remove item"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
               <div className="mt-1.5 flex items-center justify-between">
-                <div className="flex items-center overflow-hidden rounded-lg border border-neutral-200">
+                <div className="flex items-center overflow-hidden rounded-lg border border-gray-200">
                   <button
                     type="button"
                     onClick={() => it.qty > 1 ? onUpdateQty(it._id, it.qty - 1) : onRemove(it._id)}
-                    className="flex h-7 w-7 items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-100 active:bg-neutral-200"
+                    className="flex h-7 w-7 items-center justify-center text-gray-500 transition-colors hover:bg-gray-100 active:bg-gray-200"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-3 w-3" />
                   </button>
-                  <span className="min-w-[28px] select-none text-center text-sm font-medium text-ink">{it.qty}</span>
+                  <span className="min-w-[28px] select-none text-center text-sm font-medium text-gray-900">{it.qty}</span>
                   <button
                     type="button"
                     onClick={() => onUpdateQty(it._id, it.qty + 1)}
-                    className="flex h-7 w-7 items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-100 active:bg-neutral-200"
+                    className="flex h-7 w-7 items-center justify-center text-gray-500 transition-colors hover:bg-gray-100 active:bg-gray-200"
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
                 </div>
-                <span className="text-sm font-semibold text-ink">{formatPrice(it.price * it.qty, cart.currency)}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatPrice(it.price * it.qty, cart.currency)}</span>
               </div>
             </div>
           </li>
         ))}
       </ul>
 
-      <div className="flex flex-col gap-1.5 border-t border-neutral-100 pt-3 text-sm">
+      <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-3 text-sm">
         <Row label="Subtotal" value={formatPrice(subtotal, cart.currency)} />
         {appliedCoupon ? (
           <Row
@@ -837,7 +841,7 @@ function OrderSummary({
         ) : null}
         {isFreeDelivery ? (
           <div className="flex justify-between text-sm">
-            <span className="text-neutral-600">Shipping</span>
+            <span className="text-gray-600">Shipping</span>
             <span className="font-semibold text-green-700">FREE</span>
           </div>
         ) : (
@@ -845,7 +849,7 @@ function OrderSummary({
         )}
       </div>
 
-      <div className="flex justify-between border-t border-neutral-200 pt-3 text-base font-bold text-ink">
+      <div className="flex justify-between border-t border-gray-200 pt-3 text-base font-bold text-gray-900">
         <span>Total</span>
         <span>{formatPrice(total, cart.currency)}</span>
       </div>
@@ -854,7 +858,7 @@ function OrderSummary({
         <Lock className="h-[14px] w-[14px]" />
         <span className="ml-1.5">Place order</span>
       </Button>
-      <p className="text-center text-xs text-neutral-500">
+      <p className="text-center text-xs text-gray-500">
         By placing your order you agree to our{" "}
         <Link href="/terms" className="underline underline-offset-2">terms</Link>.
       </p>
@@ -865,8 +869,47 @@ function OrderSummary({
 function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <div className="flex justify-between">
-      <span className="text-neutral-600">{label}</span>
-      <span className={muted ? "text-neutral-500" : ""}>{value}</span>
+      <span className="text-gray-600">{label}</span>
+      <span className={muted ? "text-gray-500" : ""}>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Per-line customization cost breakdown in the order summary. Rebuilt from
+ * the line's option strings + the public customization config so customers
+ * see exactly where a personalised jersey's extra cost comes from before
+ * placing the order.
+ */
+function AddOnBreakdown({
+  price,
+  options,
+  currency,
+}: {
+  price: number;
+  options?: Record<string, string>;
+  currency: string;
+}) {
+  const hasCustomOptions = Boolean(options?.Name || options?.Number || options?.Patches);
+  const { data: customizations } = usePublicCustomizations(hasCustomOptions);
+  const { basePrice, addOns } = deriveAddOns(price, options, customizations);
+  if (!addOns || addOns.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-col gap-px rounded-sm border border-gray-100 bg-gray-50 px-1.5 py-1 text-[11px]">
+      <div className="flex justify-between text-gray-500">
+        <span>Base price</span>
+        <span className="tabular-nums">{formatPrice(basePrice ?? price, currency)}</span>
+      </div>
+      {addOns.map((a, i) => (
+        <div key={i} className="flex justify-between text-gray-500">
+          <span>+ {a.label}</span>
+          <span className="tabular-nums">{formatPrice(a.amount, currency)}</span>
+        </div>
+      ))}
+      <div className="flex justify-between border-t border-gray-200 pt-px font-medium text-gray-900">
+        <span>Per item</span>
+        <span className="tabular-nums">{formatPrice(price, currency)}</span>
+      </div>
     </div>
   );
 }

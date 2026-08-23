@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { AlertTriangle, BadgeCheck, Check, EyeOff, Loader2, MessageSquare, Trash2, X } from "lucide-react";
-import { Avatar, Button, Spinner } from "@/components/ui";
+import { Avatar, Button } from "@/components/ui";
+import { AdminListSkeleton } from "@/components/admin/Skeleton";
 import { Pagination, RatingStars, Select } from "@/components/composed";
 import { useUIStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils/cn";
@@ -161,7 +162,7 @@ export function ReviewsModerationClient() {
   const filtersActive = status !== "all" || Boolean(rating) || sort !== "newest";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-ink">Reviews</h1>
@@ -197,7 +198,7 @@ export function ReviewsModerationClient() {
       </div>
 
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper"><Spinner /></div>
+        <AdminListSkeleton rows={6} columns={3} withThumb roundThumb />
       ) : isError ? (
         <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
           <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />

@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowRight, CalendarClock, CheckCircle2, Clock, EyeOff, Image as ImageIcon, Plus, Search, Sparkles, X } from "lucide-react";
-import { Button, Input, Spinner } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { Pagination, Select } from "@/components/composed";
+import { AdminListSkeleton } from "@/components/admin/Skeleton";
 import { cn } from "@/lib/utils/cn";
 import { useAdminOffers } from "@/hooks/useOffer";
 import { AdminError } from "@/lib/api/admin";
@@ -55,42 +56,43 @@ function windowLabel(offer: Offer): { label: string; cold: boolean } {
   return { label: `Until ${formatDate(offer.endsAt)}`, cold: false };
 }
 
+/* Flowbite badges: bg-*-100 text-*-800, 12px medium, 4px radius. */
 function StatusChip({ status }: { status: OfferStatus }) {
   switch (status) {
     case "active":
-      return <span className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-2.5 w-2.5" aria-hidden /> Active</span>;
+      return <span className="inline-flex items-center gap-[4px] rounded-[4px] bg-green-100 px-[10px] py-[2px] text-[12px] font-medium text-green-800"><CheckCircle2 className="h-[12px] w-[12px]" aria-hidden /> Active</span>;
     case "scheduled":
-      return <span className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700"><CalendarClock className="h-2.5 w-2.5" aria-hidden /> Scheduled</span>;
+      return <span className="inline-flex items-center gap-[4px] rounded-[4px] bg-blue-100 px-[10px] py-[2px] text-[12px] font-medium text-blue-800"><CalendarClock className="h-[12px] w-[12px]" aria-hidden /> Scheduled</span>;
     case "ended":
-      return <span className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-100 text-neutral-500"><Clock className="h-2.5 w-2.5" aria-hidden /> Ended</span>;
+      return <span className="inline-flex items-center gap-[4px] rounded-[4px] bg-gray-100 px-[10px] py-[2px] text-[12px] font-medium text-gray-800"><Clock className="h-[12px] w-[12px]" aria-hidden /> Ended</span>;
     case "draft":
     default:
-      return <span className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-100 text-neutral-500"><EyeOff className="h-2.5 w-2.5" aria-hidden /> Draft</span>;
+      return <span className="inline-flex items-center gap-[4px] rounded-[4px] bg-gray-100 px-[10px] py-[2px] text-[12px] font-medium text-gray-800"><EyeOff className="h-[12px] w-[12px]" aria-hidden /> Draft</span>;
   }
 }
 
 function OfferRow({ offer }: { offer: Offer }) {
   const win = windowLabel(offer);
   return (
-    <tr className="transition-colors hover:bg-neutral-50">
-      <td className="px-3 py-2.5 align-middle">
-        <div className="flex flex-col gap-0.5">
-          <Link href={`/admin/offers/${offer._id}`} className="text-sm font-medium text-ink underline-offset-2 hover:underline">
+    <tr className="bg-white transition duration-75 hover:bg-gray-50">
+      <td className="px-[16px] py-[12px] align-middle">
+        <div className="flex flex-col gap-[2px]">
+          <Link href={`/admin/offers/${offer._id}`} className="text-[14px] font-semibold text-gray-900 underline-offset-2 hover:text-[#1A56DB] hover:underline">
             {offer.name}
           </Link>
-          <span className="line-clamp-1 max-w-[280px] text-xs text-neutral-500">/offers/{offer.slug}</span>
+          <span className="line-clamp-1 max-w-[280px] text-[12px] text-gray-500">/offers/{offer.slug}</span>
         </div>
       </td>
-      <td className="px-3 py-2.5 align-middle text-sm text-neutral-700">{formatValue(offer)}</td>
-      <td className="px-3 py-2.5 align-middle"><StatusChip status={offer.status} /></td>
-      <td className={cn("px-3 py-2.5 align-middle text-xs", win.cold ? "text-neutral-400" : "text-neutral-600")}>{win.label}</td>
-      <td className="px-3 py-2.5 align-middle tabular-nums text-sm text-neutral-600">{offer.products.length.toLocaleString("en-US")}</td>
-      <td className="px-3 py-2.5 align-middle text-sm text-neutral-600">
-        <span className="inline-flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5 text-neutral-400" aria-hidden />{offer.banners.length}</span>
+      <td className="px-[16px] py-[12px] align-middle text-[14px] text-gray-700">{formatValue(offer)}</td>
+      <td className="px-[16px] py-[12px] align-middle"><StatusChip status={offer.status} /></td>
+      <td className={cn("px-[16px] py-[12px] align-middle text-[13px]", win.cold ? "text-gray-400" : "text-gray-500")}>{win.label}</td>
+      <td className="px-[16px] py-[12px] align-middle tabular-nums text-[14px] text-gray-500">{offer.products.length.toLocaleString("en-US")}</td>
+      <td className="px-[16px] py-[12px] align-middle text-[14px] text-gray-500">
+        <span className="inline-flex items-center gap-[4px]"><ImageIcon className="h-[16px] w-[16px] text-gray-400" aria-hidden />{offer.banners.length}</span>
       </td>
-      <td className="px-3 py-2.5 align-middle text-right">
-        <Link href={`/admin/offers/${offer._id}`} className="inline-flex items-center gap-1 rounded-sm px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-ink">
-          Edit <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+      <td className="px-[16px] py-[12px] align-middle text-right">
+        <Link href={`/admin/offers/${offer._id}`} className="inline-flex items-center gap-[6px] rounded-[8px] px-[10px] py-[8px] text-[13px] font-medium text-[#1A56DB] transition duration-75 hover:bg-gray-100 hover:underline">
+          Edit <ArrowRight className="h-[16px] w-[16px]" aria-hidden />
         </Link>
       </td>
     </tr>
@@ -135,76 +137,89 @@ export function OffersAdminClient() {
   const filtersActive = status !== "all" || windowFilter !== "all" || Boolean(qFromUrl) || sort !== "newest";
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-[16px]">
+      <header className="flex flex-wrap items-center justify-between gap-[12px]">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Offers</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">Auto-applied promotions with curated product sets and on-storefront banners. Best discount wins per product; offers stack with coupons at checkout.</p>
+          <h1 className="text-[24px] font-bold leading-tight text-gray-900">Offers</h1>
+          <p className="mt-[4px] text-[14px] text-gray-500">Auto-applied promotions with curated product sets and on-storefront banners. Best discount wins per product; offers stack with coupons at checkout.</p>
         </div>
-        <div className="flex items-center gap-2">
-          {meta ? <span className="text-sm text-neutral-400">{meta.total.toLocaleString("en-US")} total</span> : null}
-          <Link href="/admin/offers/new" className="inline-flex items-center gap-1.5 rounded-sm bg-ink px-3 py-2 text-sm font-medium text-paper transition-colors hover:bg-neutral-800">
-            <Plus className="h-4 w-4" aria-hidden /> New offer
+        <div className="flex items-center gap-[8px]">
+          {meta ? <span className="text-[14px] text-gray-500">{meta.total.toLocaleString("en-US")} total</span> : null}
+          {/* Flowbite primary button */}
+          <Link
+            href="/admin/offers/new"
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[16px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F]"
+          >
+            <Plus className="h-[16px] w-[16px]" aria-hidden /> New offer
           </Link>
         </div>
       </header>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-sm border border-neutral-200 bg-paper px-4 py-3">
-        <form onSubmit={onSubmitSearch} className="flex min-w-[180px] flex-1 items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" aria-hidden />
-            <Input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Name, slug, or description" className="pl-8" />
+      {/* Filter bar - Flowbite table toolbar */}
+      <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm lg:flex-row lg:items-center">
+        <form onSubmit={onSubmitSearch} className="flex w-full min-w-0 flex-1 items-center gap-[8px]">
+          <label htmlFor="offers-search" className="sr-only">Search offers</label>
+          <div className="relative min-w-0 flex-1 lg:max-w-[420px]">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+              <Search className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+            </div>
+            <Input id="offers-search" type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Name, slug, or description" className="pl-[36px]" />
           </div>
-          <button type="submit" className="rounded-full border border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-neutral-400 hover:text-ink">Find</button>
+          <button
+            type="submit"
+            className="h-[40px] shrink-0 rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F]"
+          >
+            Find
+          </button>
         </form>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Status</span>
-          <Select value={status} onChange={(e) => update({ status: e.target.value === "all" ? undefined : e.target.value })} options={STATUS_FILTERS} />
-        </div>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Window</span>
-          <Select value={windowFilter} onChange={(e) => update({ window: e.target.value === "all" ? undefined : e.target.value })} options={WINDOW_FILTERS} />
-        </div>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Sort</span>
-          <Select value={sort} onChange={(e) => update({ sort: e.target.value === "newest" ? undefined : e.target.value })} options={SORT_OPTIONS} />
-        </div>
-        {filtersActive ? (
-          <>
-            <div className="h-5 w-px bg-neutral-200" />
-            <button type="button" onClick={() => router.replace(pathname, { scroll: false })} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-ink">
-              <X className="h-3 w-3" aria-hidden /> Clear
+
+        <div className="flex flex-wrap items-center gap-[12px] lg:ml-auto lg:shrink-0 lg:justify-end">
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="offers-status" className="text-[13px] font-medium text-gray-500">Status</label>
+            <Select id="offers-status" value={status} onChange={(e) => update({ status: e.target.value === "all" ? undefined : e.target.value })} options={STATUS_FILTERS} />
+          </div>
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="offers-window" className="text-[13px] font-medium text-gray-500">Window</label>
+            <Select id="offers-window" value={windowFilter} onChange={(e) => update({ window: e.target.value === "all" ? undefined : e.target.value })} options={WINDOW_FILTERS} />
+          </div>
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="offers-sort" className="text-[13px] font-medium text-gray-500">Sort</label>
+            <Select id="offers-sort" value={sort} onChange={(e) => update({ sort: e.target.value === "newest" ? undefined : e.target.value })} options={SORT_OPTIONS} />
+          </div>
+          {filtersActive ? (
+            <button
+              type="button"
+              onClick={() => router.replace(pathname, { scroll: false })}
+              className="inline-flex h-[40px] items-center gap-[6px] rounded-[8px] border border-gray-200 bg-white px-[12px] text-[13px] font-medium text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <X className="h-[14px] w-[14px]" aria-hidden /> Clear
             </button>
-          </>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper"><Spinner /></div>
+        <AdminListSkeleton rows={8} columns={5} withThumb={false} />
       ) : isError ? (
-        <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
-          <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-          <p className="text-sm text-neutral-500">{error instanceof AdminError ? error.message : "Couldn't load offers."}</p>
+        <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
+          <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+          <p className="text-[14px] text-gray-500">{error instanceof AdminError ? error.message : "Couldn't load offers."}</p>
           <Button variant="secondary" onClick={() => refetch()}>Try again</Button>
         </div>
       ) : offers.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-neutral-200 bg-paper py-14 text-center">
-          <Sparkles className="h-8 w-8 text-neutral-200" aria-hidden />
+        <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-dashed border-gray-300 bg-white py-[56px] text-center">
+          <Sparkles className="h-[32px] w-[32px] text-gray-300" aria-hidden />
           <div>
-            <p className="font-medium text-neutral-600">{filtersActive ? "No offers match these filters." : "No offers yet."}</p>
+            <p className="text-[14px] font-medium text-gray-600">{filtersActive ? "No offers match these filters." : "No offers yet."}</p>
             {!filtersActive && (
-              <p className="mt-0.5 text-sm text-neutral-400">
-                <Link href="/admin/offers/new" className="underline underline-offset-2">Create your first offer</Link> to start running promotions.
+              <p className="mt-[4px] text-[14px] text-gray-400">
+                <Link href="/admin/offers/new" className="font-medium text-[#1A56DB] hover:underline">Create your first offer</Link> to start running promotions.
               </p>
             )}
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-sm border border-neutral-200 bg-paper">
+        <div className="overflow-x-auto rounded-[8px] border border-gray-200 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">

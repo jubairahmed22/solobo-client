@@ -4,23 +4,37 @@ import * as React from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  Check,
   Loader2,
   Minus,
   Package,
+  Pencil,
   Plus,
   Search,
   Trash2,
   X,
 } from "lucide-react";
-import { Button, Input, Spinner } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { AdminInlineSkeleton } from "@/components/admin/Skeleton";
 import { Select } from "@/components/composed";
 import { cn } from "@/lib/utils/cn";
 import { useUIStore } from "@/store/uiStore";
+import { usePublicCustomizations } from "@/hooks/useCustomizations";
+import {
+  CustomizationFields,
+  customizationAddOns,
+  customizationOptions,
+  draftFromOptions,
+  isCustomizationKey,
+  useCustomizationAssignment,
+  type CustomizationDraft,
+} from "@/components/admin/CustomizationEditor";
 import {
   useAddAdminOrderItem,
   useAdminProducts,
   useRemoveAdminOrderItem,
   useUpdateAdminOrderItem,
+  useUpdateOrderShipping,
 } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
 import { catalogApi } from "@/lib/api/catalog";
@@ -86,10 +100,140 @@ interface ItemRowEditableProps {
   readOnly: boolean;
 }
 
+/**
+ * Inline personalisation editor for an existing line - lets support staff
+ * add, change, or remove Name / Number / Patches / Print on orders that
+ * came in over social media or at the counter. The server preserves the
+ * variant axes and re-prices the line.
+ */
+function LineCustomizationEditor({
+  orderId,
+  item,
+  currency,
+  onClose,
+}: {
+  orderId: string;
+  item: OrderItem;
+  currency: string;
+  onClose: () => void;
+}) {
+  const toast = useUIStore((s) => s.toast);
+  const updateItem = useUpdateAdminOrderItem(orderId);
+  const { data: customizationConfig } = usePublicCustomizations();
+
+  const [detail, setDetail] = React.useState<ProductDetail | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    catalogApi
+      .getProduct(item.slug)
+      .then((p) => {
+        if (!cancelled) setDetail(p);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Couldn't load product");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item.slug]);
+
+  const { assignment, patchChoices, allowName, allowNumber } =
+    useCustomizationAssignment(customizationConfig, detail);
+  const [draft, setDraft] = React.useState<CustomizationDraft>(() =>
+    draftFromOptions(item.options),
+  );
+
+  const hasExistingCustomization = Object.keys(item.options ?? {}).some(isCustomizationKey);
+
+  const save = async (options: Record<string, string>) => {
+    try {
+      await updateItem.mutateAsync({ itemId: item._id, body: { options } });
+      toast({
+        title: Object.keys(options).length > 0 ? "Customization updated" : "Customization removed",
+        tone: "success",
+      });
+      onClose();
+    } catch (err) {
+      const message =
+        err instanceof AdminError ? err.message : "Couldn't update customization";
+      toast({ title: message, tone: "error" });
+    }
+  };
+
+  return (
+    <div className="mt-1 rounded-[8px] border border-gray-200 bg-gray-50 p-[12px]">
+      {loading ? (
+        <AdminInlineSkeleton rows={2} />
+      ) : error ? (
+        <p className="text-[13px] font-medium text-red-600">{error}</p>
+      ) : !assignment ? (
+        <p className="text-[13px] text-gray-500">
+          No customization is configured for this product.
+        </p>
+      ) : (
+        <>
+          <CustomizationFields
+            draft={draft}
+            onChange={setDraft}
+            config={customizationConfig}
+            allowName={allowName}
+            allowNumber={allowNumber}
+            patchChoices={patchChoices}
+            currency={currency}
+          />
+          <div className="mt-[12px] flex flex-wrap items-center gap-[8px]">
+            <button
+              type="button"
+              onClick={() =>
+                void save(customizationOptions(draft, allowName, allowNumber, patchChoices))
+              }
+              disabled={updateItem.isPending}
+              className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[16px] text-[13px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {updateItem.isPending ? (
+                <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden />
+              ) : (
+                <Check className="h-[14px] w-[14px]" aria-hidden />
+              )}
+              Save customization
+            </button>
+            {hasExistingCustomization ? (
+              <button
+                type="button"
+                onClick={() => void save({})}
+                disabled={updateItem.isPending}
+                className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[12px] text-[13px] font-medium text-red-600 transition duration-75 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-[14px] w-[14px]" aria-hidden />
+                Remove
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-[36px] items-center rounded-[8px] border border-gray-300 bg-white px-[12px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ItemRowEditable({ orderId, item, currency, readOnly }: ItemRowEditableProps) {
   const toast = useUIStore((s) => s.toast);
   const updateItem = useUpdateAdminOrderItem(orderId);
   const removeItem = useRemoveAdminOrderItem(orderId);
+  const [customOpen, setCustomOpen] = React.useState(false);
 
   // Local qty so the cashier can stage a multi-step change (type "5", commit
   // on blur) without the +/- buttons feeling laggy. We sync from props
@@ -132,7 +276,8 @@ function ItemRowEditable({ orderId, item, currency, readOnly }: ItemRowEditableP
   };
 
   return (
-    <li className="flex items-start gap-1 border-b border-neutral-100 px-1.5 py-1 last:border-b-0">
+    <li className="border-b border-neutral-100 px-1.5 py-1 last:border-b-0">
+      <div className="flex items-start gap-1">
       <div className="h-5 w-5 shrink-0 overflow-hidden rounded-sm border border-neutral-200 bg-neutral-50">
         {item.image ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -206,19 +351,30 @@ function ItemRowEditable({ orderId, item, currency, readOnly }: ItemRowEditableP
           <div className="text-sm font-medium text-ink tabular-nums">
             {formatMoney(item.lineTotal, currency)}
           </div>
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={busy}
-            className="text-[11px] text-neutral-500 hover:text-ink disabled:opacity-50"
-          >
-            {removeItem.isPending ? (
-              <Loader2 className="inline h-2 w-2 animate-spin" aria-hidden />
-            ) : (
-              <Trash2 className="inline h-2 w-2" aria-hidden />
-            )}{" "}
-            Remove
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setCustomOpen((o) => !o)}
+              disabled={busy}
+              className="text-[11px] text-neutral-500 hover:text-[#1A56DB] disabled:opacity-50"
+              title="Add or edit personalisation on this line"
+            >
+              <Pencil className="inline h-2 w-2" aria-hidden /> Customize
+            </button>
+            <button
+              type="button"
+              onClick={onRemove}
+              disabled={busy}
+              className="text-[11px] text-neutral-500 hover:text-red-600 disabled:opacity-50"
+            >
+              {removeItem.isPending ? (
+                <Loader2 className="inline h-2 w-2 animate-spin" aria-hidden />
+              ) : (
+                <Trash2 className="inline h-2 w-2" aria-hidden />
+              )}{" "}
+              Remove
+            </button>
+          </div>
         </div>
       ) : (
         <div className="shrink-0 text-right text-xs">
@@ -230,6 +386,17 @@ function ItemRowEditable({ orderId, item, currency, readOnly }: ItemRowEditableP
           </div>
         </div>
       )}
+      </div>
+
+      {/* Expandable personalisation editor */}
+      {customOpen && !readOnly ? (
+        <LineCustomizationEditor
+          orderId={orderId}
+          item={item}
+          currency={currency}
+          onClose={() => setCustomOpen(false)}
+        />
+      ) : null}
     </li>
   );
 }
@@ -346,9 +513,7 @@ function AddItemPicker({ orderId, onClose, onAdded }: PickerProps) {
       ) : null}
 
       {isLoading ? (
-        <div className="flex h-20 items-center justify-center">
-          <Spinner />
-        </div>
+        <AdminInlineSkeleton rows={3} withThumb />
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center gap-0.5 rounded-md border border-dashed border-neutral-300 bg-paper p-1.5 text-center text-xs text-neutral-600">
           <Package className="h-3 w-3 text-neutral-400" aria-hidden />
@@ -520,7 +685,24 @@ function ItemConfigurator({ orderId, summary, onCancel, onAdded }: ConfiguratorP
     );
   }, [detail, axes, selection]);
 
-  const unitPrice = matchedVariant?.price ?? detail?.price ?? summary.price;
+  /* Customization - same assignment matching + option encoding as the POS
+   * configurator and the storefront PDP. The server re-prices add-ons. */
+  const { data: customizationConfig } = usePublicCustomizations();
+  const { assignment, patchChoices, allowName, allowNumber } =
+    useCustomizationAssignment(customizationConfig, detail);
+  const [custom, setCustom] = React.useState<CustomizationDraft>(() => draftFromOptions(undefined));
+  React.useEffect(() => {
+    setCustom(draftFromOptions(undefined));
+  }, [detail?._id]);
+  const addOnTotal = customizationAddOns(
+    custom,
+    customizationConfig,
+    allowName,
+    allowNumber,
+    patchChoices,
+  ).reduce((s, a) => s + a.amount, 0);
+
+  const unitPrice = (matchedVariant?.price ?? detail?.price ?? summary.price) + addOnTotal;
   const stock = matchedVariant?.stock ?? detail?.stock ?? summary.stock;
   const trackStock = detail?.trackStock ?? true;
   const overStock = trackStock && qty > stock;
@@ -528,14 +710,15 @@ function ItemConfigurator({ orderId, summary, onCancel, onAdded }: ConfiguratorP
   const onConfirm = async () => {
     if (!detail) return;
     if (axes.length > 0 && !matchedVariant) return;
+    const options: Record<string, string> = {
+      ...(matchedVariant?.options ?? {}),
+      ...customizationOptions(custom, allowName, allowNumber, patchChoices),
+    };
     const body: AdminAddOrderItemInput = {
       productId: detail._id,
       variantId: matchedVariant?._id,
       qty,
-      options:
-        matchedVariant?.options && Object.keys(matchedVariant.options).length > 0
-          ? matchedVariant.options
-          : undefined,
+      options: Object.keys(options).length > 0 ? options : undefined,
     };
     try {
       await addItem.mutateAsync(body);
@@ -583,9 +766,7 @@ function ItemConfigurator({ orderId, summary, onCancel, onAdded }: ConfiguratorP
       </header>
 
       {loading ? (
-        <div className="flex h-12 items-center justify-center">
-          <Spinner />
-        </div>
+        <AdminInlineSkeleton rows={2} />
       ) : error ? (
         <div className="flex items-center gap-0.5 text-xs text-ink">
           <AlertTriangle className="h-2 w-2" aria-hidden /> {error}
@@ -615,6 +796,28 @@ function ItemConfigurator({ orderId, summary, onCancel, onAdded }: ConfiguratorP
                   </label>
                 );
               })}
+            </div>
+          ) : null}
+
+          {/* Customization - only for products with a matching assignment */}
+          {assignment && (allowName || allowNumber || patchChoices.length > 0) ? (
+            <div className="border-t border-gray-200 pt-[12px]">
+              <p className="mb-[8px] text-[14px] font-semibold text-gray-900">
+                Customization <span className="font-normal text-gray-400">(optional)</span>
+              </p>
+              <CustomizationFields
+                draft={custom}
+                onChange={setCustom}
+                config={customizationConfig}
+                allowName={allowName}
+                allowNumber={allowNumber}
+                patchChoices={patchChoices}
+              />
+              {addOnTotal > 0 ? (
+                <p className="mt-[8px] text-[13px] font-semibold text-gray-900">
+                  Unit price with add-ons: {formatMoney(unitPrice, detail?.currency ?? "BDT")}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -685,6 +888,25 @@ function ItemConfigurator({ orderId, summary, onCancel, onAdded }: ConfiguratorP
 /* ───────────────────── Totals block ───────────────────── */
 
 function TotalsBlock({ order }: { order: AdminOrderDetail }) {
+  const toast = useUIStore((s) => s.toast);
+  const updateShipping = useUpdateOrderShipping(order._id);
+  const editable = isEditableStatus(order.status);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState("");
+
+  const saveShipping = async () => {
+    const value = Math.max(0, Number(draft) || 0);
+    try {
+      await updateShipping.mutateAsync(value);
+      toast({ title: "Delivery charge updated", tone: "success" });
+      setEditing(false);
+    } catch (err) {
+      const message =
+        err instanceof AdminError ? err.message : "Couldn't update the delivery charge";
+      toast({ title: message, tone: "error" });
+    }
+  };
+
   const row = (label: string, amount: number, accent = false) => (
     <div className="flex items-center justify-between text-xs">
       <span className={accent ? "text-ink font-semibold" : "text-neutral-600"}>
@@ -700,11 +922,75 @@ function TotalsBlock({ order }: { order: AdminOrderDetail }) {
       </span>
     </div>
   );
+
   return (
     <div className="flex flex-col gap-0.5 border-t border-neutral-200 px-1.5 py-1">
       {row("Subtotal", order.subtotal)}
       {order.discount > 0 ? row("Discount", -order.discount) : null}
-      {row("Shipping", order.shippingCost)}
+
+      {/* Delivery charge - manually editable while the order is still live
+          (0 = free delivery / pickup). Server recomputes the total. */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-neutral-600">Delivery</span>
+        {editing ? (
+          <span className="flex items-center gap-[6px]">
+            <input
+              inputMode="numeric"
+              aria-label="Delivery charge"
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); void saveShipping(); }
+                if (e.key === "Escape") setEditing(false);
+              }}
+              className="h-[28px] w-[80px] rounded-[6px] border border-gray-300 bg-gray-50 px-[8px] text-right text-[13px] tabular-nums text-gray-900 focus:border-[#1A56DB] focus:bg-white focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void saveShipping()}
+              disabled={updateShipping.isPending}
+              className="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] bg-[#1A56DB] text-white transition duration-75 hover:bg-[#1E429F] disabled:opacity-50"
+              aria-label="Save delivery charge"
+            >
+              {updateShipping.isPending ? (
+                <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden />
+              ) : (
+                <Check className="h-[14px] w-[14px]" aria-hidden />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="flex h-[28px] w-[28px] items-center justify-center rounded-[6px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+              aria-label="Cancel"
+            >
+              <X className="h-[14px] w-[14px]" aria-hidden />
+            </button>
+          </span>
+        ) : (
+          <span className="flex items-center gap-[6px]">
+            <span className="tabular-nums text-ink">
+              {formatMoney(order.shippingCost, order.currency)}
+            </span>
+            {editable ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(String(order.shippingCost ?? 0));
+                  setEditing(true);
+                }}
+                title="Edit delivery charge"
+                aria-label="Edit delivery charge"
+                className="flex h-[24px] w-[24px] items-center justify-center rounded-[6px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-[#1A56DB]"
+              >
+                <Pencil className="h-[12px] w-[12px]" aria-hidden />
+              </button>
+            ) : null}
+          </span>
+        )}
+      </div>
+
       {order.tax > 0 ? row("Tax", order.tax) : null}
       {row("Total", order.total, true)}
     </div>

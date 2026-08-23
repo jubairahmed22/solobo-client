@@ -10,7 +10,8 @@ import {
   StickyNote,
   User,
 } from "lucide-react";
-import { Avatar, Button, Input } from "@/components/ui";
+import { Avatar, Input } from "@/components/ui";
+import { cn } from "@/lib/utils/cn";
 import { useUIStore } from "@/store/uiStore";
 import { usePatchAdminOrderCustomer } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
@@ -53,7 +54,7 @@ function normaliseAddress(a: AddressInput): AddressInput {
     altPhone: a.altPhone?.trim() || undefined,
     line1: a.line1.trim(),
     line2: a.line2?.trim() || undefined,
-    city: a.city.trim(),
+    city: a.city?.trim() || undefined,
     district: a.district.trim(),
     division: a.division?.trim() || undefined,
     postalCode: a.postalCode?.trim() || undefined,
@@ -89,6 +90,8 @@ function diffAddress(
   }
   return out;
 }
+
+const fieldLabel = "flex flex-col gap-[6px] text-[13px] font-medium text-gray-500";
 
 /* ───────────────────── Customer editor card ───────────────────── */
 
@@ -182,31 +185,40 @@ export function OrderCustomerEditor({ order }: OrderCustomerEditorProps) {
   const customer = order.user;
 
   return (
-    <section className="rounded-md border border-neutral-200 bg-paper p-1.5">
-      <header className="mb-1 flex items-center gap-0.5">
-        <h2 className="flex items-center gap-0.5 text-base font-semibold text-ink">
-          <User className="h-2 w-2" aria-hidden /> Customer
-        </h2>
-      </header>
+    <section className="rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+      <h2 className="mb-[16px] flex items-center gap-[8px] text-[16px] font-semibold text-gray-900">
+        <User className="h-[16px] w-[16px] text-gray-400" aria-hidden /> Customer
+      </h2>
 
-      {/* Account block - name comes from the linked user record (if any) and
-          isn't editable here; admins manage that on the user detail page. */}
-      <div className="flex items-start gap-1">
+      {/* Customer block - the shipping snapshot is the source of truth for
+          who the buyer is: on walk-in POS orders the linked user record is
+          the cashier, never the customer. */}
+      <div className="flex items-start gap-[12px]">
         <Avatar
           src={undefined}
-          alt={customer?.name ?? order.email ?? "Guest"}
-          size={32}
+          alt={order.shippingAddress?.fullName || customer?.name || order.email || "Guest"}
+          size={40}
         />
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-ink truncate">
-            {customer?.name ?? "Guest"}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-[8px]">
+            <span className="truncate text-[14px] font-semibold text-gray-900">
+              {order.shippingAddress?.fullName || customer?.name || "Guest"}
+            </span>
+            {order.channel === "pos" ? (
+              <span className="shrink-0 rounded-[4px] bg-purple-100 px-[8px] py-[2px] text-[11px] font-medium text-purple-800">
+                POS
+              </span>
+            ) : null}
           </div>
-          <div className="text-xs text-neutral-600 truncate">
-            Account email: {customer?.email ?? "-"}
-          </div>
-          {customer?.phone ? (
-            <div className="flex items-center gap-0.5 text-xs text-neutral-600">
-              <Phone className="h-2 w-2" aria-hidden /> {customer.phone}
+          {order.channel !== "pos" ? (
+            <div className="truncate text-[13px] text-gray-500">
+              Account email: {customer?.email ?? "-"}
+            </div>
+          ) : null}
+          {order.shippingAddress?.phone || customer?.phone ? (
+            <div className="flex items-center gap-[6px] text-[13px] text-gray-500">
+              <Phone className="h-[13px] w-[13px]" aria-hidden />
+              {order.shippingAddress?.phone || customer?.phone}
             </div>
           ) : null}
         </div>
@@ -214,7 +226,7 @@ export function OrderCustomerEditor({ order }: OrderCustomerEditorProps) {
 
       {/* Per-order email override - useful for guest checkouts or when the
           customer asks support to send the receipt to a different address. */}
-      <label className="mt-1 flex flex-col gap-0.5 text-xs text-neutral-600">
+      <label className={cn(fieldLabel, "mt-[16px]")}>
         Order email (receipts + notifications)
         <Input
           type="email"
@@ -226,44 +238,40 @@ export function OrderCustomerEditor({ order }: OrderCustomerEditorProps) {
 
       {/* Shipping address - partial patch on save, so an empty optional
           field clears it server-side. */}
-      <div className="mt-1 rounded-sm border border-dashed border-neutral-300 p-1">
-        <div className="mb-0.5 flex items-center gap-0.5 text-xs font-medium text-ink">
-          <MapPin className="h-2 w-2" aria-hidden /> Shipping address
+      <div className="mt-[16px] rounded-[8px] border border-dashed border-gray-300 p-[12px]">
+        <div className="mb-[8px] flex items-center gap-[6px] text-[13px] font-medium text-gray-900">
+          <MapPin className="h-[14px] w-[14px] text-gray-400" aria-hidden /> Shipping address
         </div>
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600 sm:col-span-2">
+        <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2">
+          <label className={cn(fieldLabel, "sm:col-span-2")}>
             Full name
             <Input value={address.fullName} onChange={upd("fullName")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
+          <label className={fieldLabel}>
             Phone
             <Input value={address.phone} onChange={upd("phone")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
+          <label className={fieldLabel}>
             Alt phone
             <Input value={address.altPhone ?? ""} onChange={upd("altPhone")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600 sm:col-span-2">
+          <label className={cn(fieldLabel, "sm:col-span-2")}>
             Address line 1
             <Input value={address.line1} onChange={upd("line1")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600 sm:col-span-2">
+          <label className={cn(fieldLabel, "sm:col-span-2")}>
             Address line 2
             <Input value={address.line2 ?? ""} onChange={upd("line2")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
-            City
-            <Input value={address.city} onChange={upd("city")} />
-          </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
+          <label className={fieldLabel}>
             District
             <Input value={address.district} onChange={upd("district")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
+          <label className={fieldLabel}>
             Division
             <Input value={address.division ?? ""} onChange={upd("division")} />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
+          <label className={fieldLabel}>
             Postal code
             <Input value={address.postalCode ?? ""} onChange={upd("postalCode")} />
           </label>
@@ -272,25 +280,25 @@ export function OrderCustomerEditor({ order }: OrderCustomerEditorProps) {
 
       {/* Notes - customer-facing is shown on the invoice; internal stays
           admin-only and is handy for the support handoff log. */}
-      <div className="mt-1 grid grid-cols-1 gap-1">
-        <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
-          <span className="flex items-center gap-0.5">
-            <StickyNote className="h-2 w-2" aria-hidden /> Customer-facing note
+      <div className="mt-[16px] grid grid-cols-1 gap-[12px]">
+        <label className={fieldLabel}>
+          <span className="flex items-center gap-[6px]">
+            <StickyNote className="h-[14px] w-[14px] text-gray-400" aria-hidden /> Customer-facing note
           </span>
           <textarea
-            className="w-full rounded-sm border border-neutral-300 px-1 py-0.5 text-sm focus-visible:border-ink focus-visible:outline-none"
+            className="w-full rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] py-[10px] text-[14px] text-gray-900 focus:border-[#1A56DB] focus:bg-white focus:outline-none"
             value={customerNote}
             onChange={(e) => setCustomerNote(e.target.value)}
             rows={2}
             placeholder="Visible on the invoice"
           />
         </label>
-        <label className="flex flex-col gap-0.5 text-xs text-neutral-600">
-          <span className="flex items-center gap-0.5">
-            <StickyNote className="h-2 w-2" aria-hidden /> Internal note (admin-only)
+        <label className={fieldLabel}>
+          <span className="flex items-center gap-[6px]">
+            <StickyNote className="h-[14px] w-[14px] text-gray-400" aria-hidden /> Internal note (admin-only)
           </span>
           <textarea
-            className="w-full rounded-sm border border-neutral-300 px-1 py-0.5 text-sm focus-visible:border-ink focus-visible:outline-none"
+            className="w-full rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] py-[10px] text-[14px] text-gray-900 focus:border-[#1A56DB] focus:bg-white focus:outline-none"
             value={internalNotes}
             onChange={(e) => setInternalNotes(e.target.value)}
             rows={2}
@@ -299,28 +307,36 @@ export function OrderCustomerEditor({ order }: OrderCustomerEditorProps) {
         </label>
       </div>
 
-      <div className="mt-1 flex items-center justify-end gap-0.5">
+      <div className="mt-[16px] flex items-center justify-end gap-[8px]">
         {dirty ? (
-          <Button
-            size="sm"
-            variant="ghost"
+          /* Flowbite alternative button */
+          <button
+            type="button"
             onClick={onReset}
             disabled={patch.isPending}
+            className="inline-flex h-[36px] items-center rounded-[8px] border border-gray-300 bg-white px-[14px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Discard
-          </Button>
+          </button>
         ) : null}
-        <Button size="sm" onClick={onSave} disabled={!dirty || patch.isPending}>
+        {/* Flowbite primary button */}
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!dirty || patch.isPending}
+          className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[14px] text-[13px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+        >
           {patch.isPending ? (
-            <Loader2 className="h-2 w-2 animate-spin" aria-hidden />
+            <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden />
           ) : dirty ? (
-            <Save className="h-2 w-2" aria-hidden />
+            <Save className="h-[14px] w-[14px]" aria-hidden />
           ) : (
-            <CheckCircle2 className="h-2 w-2" aria-hidden />
+            <CheckCircle2 className="h-[14px] w-[14px]" aria-hidden />
           )}
-          <span className="ml-0.5">{dirty ? "Save changes" : "Saved"}</span>
-        </Button>
+          {dirty ? "Save changes" : "Saved"}
+        </button>
       </div>
     </section>
   );
 }
+

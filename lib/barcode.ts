@@ -1,66 +1,25 @@
 /**
- * Barcode utilities - generation, validation, label sizing, SKU generation.
- * All browser-safe: no DOM access, no side effects.
+ * Barcode utilities - thin backward-compat facade over lib/labels/*, the
+ * unified label/barcode engine (bwip-js based). Check-digit validation,
+ * format metadata and detection now live in lib/labels/{validation,formats,
+ * types}.ts; this file just re-exports them under their original names so
+ * existing call sites don't need to change.
+ *
+ * `LABEL_SIZES`/`LabelData`/`LabelSize`/`buildLabelHtml`/`buildSheetHtml`
+ * below are @deprecated - they predate the LabelTemplate/SheetLayout model
+ * (lib/labels/types.ts) and use flex-wrap positioning rather than real
+ * Avery-grid mm coordinates. Superseded by `buildTemplateLabelHtml`/
+ * `buildTemplateSheetHtml` (lib/labels/print.ts, added when the template
+ * model lands). Kept working until every call site migrates.
  */
 
-/* ─────────────── Formats ─────────────── */
+export type { Symbology as BarcodeFormat } from "./labels/types";
+export type { FormatMeta } from "./labels/formats";
+export { BARCODE_FORMATS, getFormatMeta } from "./labels/formats";
+export { isValidEAN13, isValidUPCA, isValidEAN8, isValidITF14, detectFormat } from "./labels/validation";
+export { printHtml } from "./labels/print";
 
-export type BarcodeFormat = "CODE128" | "EAN13" | "UPCA" | "EAN8" | "CODE39" | "QR";
-
-export interface FormatMeta {
-  id: BarcodeFormat;
-  label: string;
-  description: string;
-  maxChars: number;
-  numeric: boolean;
-}
-
-export const BARCODE_FORMATS: FormatMeta[] = [
-  {
-    id: "CODE128",
-    label: "Code 128",
-    description: "Universal - letters, numbers, symbols. Best for internal SKUs.",
-    maxChars: 80,
-    numeric: false,
-  },
-  {
-    id: "EAN13",
-    label: "EAN-13",
-    description: "Retail standard (13 digits). Requires GS1 prefix for global use.",
-    maxChars: 13,
-    numeric: true,
-  },
-  {
-    id: "UPCA",
-    label: "UPC-A",
-    description: "North American retail standard (12 digits).",
-    maxChars: 12,
-    numeric: true,
-  },
-  {
-    id: "EAN8",
-    label: "EAN-8",
-    description: "Compact retail (8 digits). For small packaging.",
-    maxChars: 8,
-    numeric: true,
-  },
-  {
-    id: "CODE39",
-    label: "Code 39",
-    description: "Older industrial standard - uppercase letters and digits only.",
-    maxChars: 43,
-    numeric: false,
-  },
-  {
-    id: "QR",
-    label: "QR Code",
-    description: "2D code - stores URLs, large text, or structured data.",
-    maxChars: 4296,
-    numeric: false,
-  },
-];
-
-/* ─────────────── Label sizes ─────────────── */
+/* ─────────────── Label sizes (deprecated - see module docs) ─────────────── */
 
 export interface LabelSize {
   id: string;
@@ -77,45 +36,6 @@ export const LABEL_SIZES: LabelSize[] = [
   { id: "lg",       label: '4" × 2"',          widthMM: 100, heightMM: 50,  note: "Box / product label" },
   { id: "shipping", label: '4" × 6"',          widthMM: 100, heightMM: 150, note: "Shipping label" },
 ];
-
-/* ─────────────── Check digit helpers ─────────────── */
-
-function gs1CheckDigit(digits: string): number {
-  const d = digits.replace(/\D/g, "").slice(0, -1);
-  let sum = 0;
-  for (let i = 0; i < d.length; i++) {
-    sum += parseInt(d.charAt(i)) * (i % 2 === 0 ? 1 : 3);
-  }
-  return (10 - (sum % 10)) % 10;
-}
-
-export function isValidEAN13(code: string): boolean {
-  if (!/^\d{13}$/.test(code)) return false;
-  const expected = gs1CheckDigit(code);
-  return parseInt(code.charAt(12)) === expected;
-}
-
-export function isValidUPCA(code: string): boolean {
-  if (!/^\d{12}$/.test(code)) return false;
-  return isValidEAN13("0" + code);
-}
-
-export function isValidEAN8(code: string): boolean {
-  if (!/^\d{8}$/.test(code)) return false;
-  const d = code.split("").map(Number);
-  const sum = d.slice(0, 7).reduce((a, v, i) => a + v * (i % 2 === 0 ? 3 : 1), 0);
-  return (10 - (sum % 10)) % 10 === (d[7] ?? 0);
-}
-
-/* ─────────────── Auto-detect format ─────────────── */
-
-export function detectFormat(value: string): BarcodeFormat {
-  if (!value) return "CODE128";
-  if (/^\d{13}$/.test(value) && isValidEAN13(value)) return "EAN13";
-  if (/^\d{12}$/.test(value) && isValidUPCA(value)) return "UPCA";
-  if (/^\d{8}$/.test(value) && isValidEAN8(value)) return "EAN8";
-  return "CODE128";
-}
 
 /* ─────────────── SKU / barcode generation ─────────────── */
 
@@ -140,49 +60,28 @@ export function sanitiseCode128(value: string): string {
   return value.replace(/[^\x00-\x7F]/g, "").trim().toUpperCase();
 }
 
-/* ─────────────── Print helpers ─────────────── */
+/* ─────────────── Label HTML builder (deprecated - see module docs) ─────────────── */
 
-/**
- * Open a print dialog for a pre-built HTML string, using a hidden iframe so
- * the main page layout is not disturbed.
- */
-export function printHtml(html: string): void {
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:absolute;width:0;height:0;border:0;left:-9999px;top:-9999px;";
-  document.body.appendChild(iframe);
-  const doc = iframe.contentWindow?.document;
-  if (!doc) return;
-  doc.open();
-  doc.write(html);
-  doc.close();
-  iframe.contentWindow?.focus();
-  // Small delay so images/SVGs can render before printing
-  setTimeout(() => {
-    iframe.contentWindow?.print();
-    setTimeout(() => document.body.removeChild(iframe), 2000);
-  }, 400);
-}
-
-/* ─────────────── Label HTML builder ─────────────── */
+import type { Symbology } from "./labels/types";
 
 export interface LabelData {
   barcode: string;
-  format: BarcodeFormat;
+  format: Symbology;
   title: string;
   sku?: string;
   price?: string;
-  /** Pre-rendered SVG string from JsBarcode */
+  /** Pre-rendered SVG string from the label engine */
   svgString?: string;
-  /** Pre-rendered QR data URL */
+  /** Pre-rendered QR data URL (legacy path - QR now renders as SVG like everything else) */
   qrDataUrl?: string;
 }
 
-/** Build a full @page print document for a single label. */
+/** @deprecated Use buildTemplateLabelHtml (lib/labels/print.ts) once available - this predates real mm-grid positioning. */
 export function buildLabelHtml(data: LabelData, size: LabelSize): string {
   const w = `${size.widthMM}mm`;
   const h = `${size.heightMM}mm`;
   const isQr = data.format === "QR";
-  const barcodeContent = isQr
+  const barcodeContent = isQr && data.qrDataUrl
     ? `<img src="${data.qrDataUrl}" style="width:${size.heightMM - 4}mm;height:${size.heightMM - 4}mm;display:block;margin:auto;" />`
     : data.svgString
     ? `<div style="text-align:center;">${data.svgString}</div>`
@@ -204,7 +103,7 @@ ${data.price ? `<p class="price">${data.price}</p>` : ""}
 </body></html>`;
 }
 
-/** Build a sheet of labels (for Avery-style full-page printing). */
+/** @deprecated Use buildTemplateSheetHtml (lib/labels/print.ts) once available - this is flex-wrap, not a real Avery grid. */
 export function buildSheetHtml(labels: LabelData[], size: LabelSize): string {
   const cells = labels
     .map((d) => {

@@ -297,7 +297,7 @@ export function ImageUploader({
           atCapacity && "opacity-60 cursor-not-allowed",
         )}
       >
-        <ImagePlus className="h-3 w-3 text-neutral-500" aria-hidden />
+        <ImagePlus className="h-[16px] w-[16px] text-gray-500" aria-hidden />
         {atCapacity ? (
           <p className="text-sm text-neutral-500">Maximum {max} images reached</p>
         ) : (

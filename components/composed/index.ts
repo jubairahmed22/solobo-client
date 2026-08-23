@@ -66,6 +66,7 @@ export {
 } from "./SizeChartEditor";
 export { Markdown } from "./Markdown";
 export { MarkdownEditor, type MarkdownEditorProps } from "./MarkdownEditor";
+export { VideoUploader, type VideoUploaderProps } from "./VideoUploader";
 export { ExportCsvButton, type ExportCsvButtonProps } from "./ExportCsvButton";
 export {
   OrderInvoice,

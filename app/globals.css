@@ -61,10 +61,13 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Admin shell — undo storefront uppercase / tracking.
-   Selector specificity (0,1,1) beats utility classes (0,1,0),
-   so these overrides take precedence over the base layer and
-   any component className that sets the same property.
+   Admin shell — Flowbite skin.
+   The storefront keeps its athletic black/red voice; inside
+   .admin-layout every primitive is re-themed to the Flowbite
+   application-UI recipes (gray surfaces, 8px radii, #1A56DB
+   primary blue). Selector specificity (0,1,1)+ beats utility
+   classes (0,1,0), so these overrides win over the base layer
+   and component classNames without editing each admin page.
    ───────────────────────────────────────────────────────────── */
 
 /* Headings: remove storefront uppercase + tight tracking */
@@ -76,22 +79,107 @@
   letter-spacing: normal;
 }
 
-/* Buttons: use SaaS-admin voice instead of athletic shout */
+/* Cards & chips: remap the admin's 4px radius to Flowbite's rounded-lg */
+.admin-layout .rounded-sm {
+  border-radius: 8px;
+}
+
+/* Buttons: Flowbite voice - sentence case, medium weight, 8px radius */
 .admin-layout button,
 .admin-layout [role="button"] {
   text-transform: none;
   letter-spacing: normal;
   font-weight: 500;
 }
-
-/* Inputs — tighten storefront's rounded-lg (12px) to rounded-sm (4px)
-   and soften border from neutral-300 to neutral-200 */
-.admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
-  border-radius: 4px;
-  border-color: #e5e5e5;
+.admin-layout button:not(.rounded-full),
+.admin-layout [role="button"]:not(.rounded-full) {
+  border-radius: 8px;
 }
-.admin-layout select {
-  border-radius: 4px;
+
+/* Primary buttons: ink fill → Flowbite primary blue (hover: blue-800) */
+.admin-layout button.bg-ink,
+.admin-layout a.bg-ink {
+  background-color: #1a56db;
+  border-color: #1a56db;
+  color: #ffffff;
+}
+.admin-layout button.bg-ink:hover,
+.admin-layout a.bg-ink:hover {
+  background-color: #1e429f;
+  border-color: #1e429f;
+}
+
+/* Secondary buttons: ink outline → Flowbite "alternative" (gray border).
+   Excludes ink-filled buttons, which are primary and keep the rule above. */
+.admin-layout button.border-ink:not(.bg-ink),
+.admin-layout a.border-ink:not(.bg-ink) {
+  border-color: #d1d5db;
+  color: #111827;
+}
+.admin-layout button.border-ink:not(.bg-ink):hover,
+.admin-layout a.border-ink:not(.bg-ink):hover {
+  background-color: #f3f4f6;
+}
+
+/* Form controls: Flowbite input recipe - gray-50 fill, gray-300 border,
+   8px radius, blue focus. Padding is left to each input so icon insets
+   keep working. */
+.admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.admin-layout select,
+.admin-layout textarea {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+}
+.admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.admin-layout select:focus,
+.admin-layout textarea:focus {
+  background-color: #ffffff;
+  border-color: #1a56db;
+}
+
+/* Checkboxes, radios, and range sliders pick up the Flowbite blue */
+.admin-layout input[type="checkbox"],
+.admin-layout input[type="radio"],
+.admin-layout input[type="range"] {
+  accent-color: #1a56db;
+}
+
+/* Focus rings: storefront red → Flowbite blue */
+.admin-layout :focus-visible {
+  --tw-ring-color: #1a56db;
+}
+
+/* Tables: Flowbite header row - gray-50 band, 12px uppercase gray-500 */
+.admin-layout table {
+  font-size: 14px;
+}
+.admin-layout thead {
+  background-color: #f9fafb;
+}
+.admin-layout th {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+/* ─── Admin shell — print ───
+   AdminShell locks `document.body.style.overflow = "hidden"` (inline style,
+   so it beats a plain stylesheet rule) to keep the dashboard frame from
+   scrolling as a whole - only <main> scrolls. That's correct on screen, but
+   during print it clips anything below the current viewport's scroll
+   position (e.g. the bottom of a printed sticker/invoice never renders).
+   `!important` is required here specifically to win over the inline style -
+   not used anywhere else in this file. */
+@media print {
+  body {
+    overflow: visible !important;
+    height: auto !important;
+  }
 }
 
 @layer utilities {

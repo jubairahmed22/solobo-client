@@ -3,6 +3,7 @@ import { apiClient } from "./client";
 import type { ApiResponse } from "@/types/api";
 import type {
   CloudinaryUploadResult,
+  UploadResourceType,
   UploadScope,
   UploadSignature,
 } from "@/types/uploads";
@@ -48,20 +49,25 @@ async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T>
 export const uploadsApi = {
   /**
    * Request a signed upload signature. `scope` decides the subfolder the
-   * asset lands in on Cloudinary - defaults to "product".
+   * asset lands in on Cloudinary - defaults to "product". Pass
+   * `resourceType: "video"` to target Cloudinary's video upload endpoint.
    */
-  sign: (scope: UploadScope = "product") =>
-    unwrap<UploadSignature>(apiClient.post("/uploads/sign", { scope })),
+  sign: (scope: UploadScope = "product", resourceType: UploadResourceType = "image") =>
+    unwrap<UploadSignature>(apiClient.post("/uploads/sign", { scope, resourceType })),
 
   /**
    * Delete an asset by its Cloudinary public id. The backend enforces that
    * non-admins can only destroy assets inside their own per-user folder.
+   * Video assets must pass `resourceType: "video"` or Cloudinary won't find
+   * them (image is the default resource type).
    *
    * publicId is path-encoded so slashes survive the URL round-trip.
    */
-  destroy: (publicId: string) =>
+  destroy: (publicId: string, resourceType: UploadResourceType = "image") =>
     unwrap<{ publicId: string; result: string }>(
-      apiClient.delete(`/uploads/${encodeURIComponent(publicId)}`),
+      apiClient.delete(`/uploads/${encodeURIComponent(publicId)}`, {
+        params: resourceType === "video" ? { resourceType } : undefined,
+      }),
     ),
 };
 

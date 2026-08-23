@@ -192,7 +192,7 @@ export function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               {order.shippingAddress.line1}
               {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ""}
               <br />
-              {order.shippingAddress.city}, {order.shippingAddress.district}
+              {order.shippingAddress.city ? `${order.shippingAddress.city}, ` : ""}{order.shippingAddress.district}
               {order.shippingAddress.postalCode ? ` ${order.shippingAddress.postalCode}` : ""}
               <br />
               {order.shippingAddress.country ?? "BD"}

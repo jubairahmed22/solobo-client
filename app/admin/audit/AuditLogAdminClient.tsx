@@ -4,11 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { AlertTriangle, ArrowRight, ExternalLink, History, Search, X } from "lucide-react";
-import { Button, Input, Spinner } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { Pagination, Select } from "@/components/composed";
+import { AdminListSkeleton } from "@/components/admin/Skeleton";
 import { useAdminAuditEvents } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
-import { cn } from "@/lib/utils/cn";
 import type { AdminListAuditEventsParams, AuditEvent, AuditTargetKind } from "@/types/admin";
 
 const ACTION_FILTERS: { value: string; label: string }[] = [
@@ -48,6 +48,20 @@ function formatDateTime(iso: string): string {
   } catch { return iso; }
 }
 
+/* The table splits date and time onto two lines - the one-line form is the
+   widest cell in the row and forces the whole table to scroll on tablets. */
+function formatDatePart(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  } catch { return iso; }
+}
+
+function formatTimePart(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  } catch { return ""; }
+}
+
 function actionLabel(action: string): string {
   const hit = ACTION_FILTERS.find((f) => f.value === action);
   if (hit) return hit.label;
@@ -78,15 +92,61 @@ function formatScalar(v: unknown): string {
   return String(v);
 }
 
+/* Flowbite bordered badge - the action verb */
+function ActionBadge({ action }: { action: string }) {
+  return (
+    <span className="inline-flex items-center whitespace-nowrap rounded-[4px] border border-gray-300 bg-white px-[10px] py-[2px] font-mono text-[11px] font-medium text-gray-700">
+      {actionLabel(action)}
+    </span>
+  );
+}
+
+/* Flowbite subtle badge - the target's model name */
+function TargetKindBadge({ kind }: { kind: AuditTargetKind }) {
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-[4px] bg-gray-100 px-[10px] py-[2px] text-[12px] font-medium text-gray-800">
+      {kind}
+    </span>
+  );
+}
+
+function TargetLink({ event }: { event: AuditEvent }) {
+  const href = targetHref(event.targetKind, event.targetId);
+  if (!href) {
+    return <span className="truncate text-[14px] text-gray-700" title={event.targetLabel}>{event.targetLabel}</span>;
+  }
+  return (
+    <Link
+      href={href}
+      className="inline-flex min-w-0 items-center gap-[4px] text-[14px] font-medium text-gray-900 underline-offset-2 hover:text-[#1A56DB] hover:underline"
+      title={event.targetLabel}
+    >
+      <span className="truncate">{event.targetLabel}</span>
+      <ExternalLink className="h-[14px] w-[14px] shrink-0" aria-hidden />
+    </Link>
+  );
+}
+
+function ActorIdentity({ actor }: { actor: AuditEvent["actor"] }) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-[14px] font-medium text-gray-900">{actor.name}</p>
+      <p className="truncate text-[12px] text-gray-500">
+        {actor.email}{actor.role !== "admin" ? ` · ${actor.role}` : ""}
+      </p>
+    </div>
+  );
+}
+
 function DiffCell({ diff, note }: { diff: Record<string, unknown> | undefined | null; note: string | undefined }) {
   const d = diff ?? {};
   const keys = Object.keys(d);
 
   if (keys.length === 2 && "from" in d && "to" in d) {
     return (
-      <span className="font-mono text-xs text-neutral-700">
-        {String(d.from)} <ArrowRight className="inline h-3 w-3" aria-hidden /> {String(d.to)}
-        {note ? <span className="ml-1 text-neutral-500">· {note}</span> : null}
+      <span className="font-mono text-[12px] text-gray-700">
+        {String(d.from)} <ArrowRight className="inline h-[12px] w-[12px]" aria-hidden /> {String(d.to)}
+        {note ? <span className="ml-1 text-gray-500">· {note}</span> : null}
       </span>
     );
   }
@@ -96,71 +156,113 @@ function DiffCell({ diff, note }: { diff: Record<string, unknown> | undefined | 
     const after = (d.after ?? {}) as Record<string, unknown>;
     const changed = Object.keys({ ...before, ...after }).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]));
     if (changed.length === 0) {
-      return <span className="text-xs text-neutral-500">No field changes recorded{note ? ` · ${note}` : ""}</span>;
+      return <span className="text-[12px] text-gray-500">No field changes recorded{note ? ` · ${note}` : ""}</span>;
     }
     return (
-      <ul className="m-0 list-none space-y-0.5 p-0 font-mono text-xs text-neutral-700">
+      <ul className="m-0 list-none space-y-0.5 p-0 font-mono text-[12px] text-gray-700">
         {changed.slice(0, 4).map((k) => (
           <li key={k} className="truncate">
-            <span className="text-neutral-500">{k}:</span> {String(before[k] ?? "-")} <ArrowRight className="inline h-3 w-3" aria-hidden /> {String(after[k] ?? "-")}
+            <span className="text-gray-500">{k}:</span> {String(before[k] ?? "-")} <ArrowRight className="inline h-[12px] w-[12px]" aria-hidden /> {String(after[k] ?? "-")}
           </li>
         ))}
-        {changed.length > 4 ? <li className="text-neutral-500">+{changed.length - 4} more</li> : null}
-        {note ? <li className="text-neutral-500">{note}</li> : null}
+        {changed.length > 4 ? <li className="text-gray-500">+{changed.length - 4} more</li> : null}
+        {note ? <li className="text-gray-500">{note}</li> : null}
       </ul>
     );
   }
 
   if (keys.length > 0) {
     return (
-      <span className="font-mono text-xs text-neutral-700">
+      <span className="font-mono text-[12px] text-gray-700">
         {keys.slice(0, 3).map((k) => `${k}: ${formatScalar(d[k])}`).join(" · ")}
         {keys.length > 3 ? " …" : ""}
-        {note ? <span className="ml-1 text-neutral-500">· {note}</span> : null}
+        {note ? <span className="ml-1 text-gray-500">· {note}</span> : null}
       </span>
     );
   }
 
-  return <span className="text-xs text-neutral-500">{note ?? "-"}</span>;
+  return <span className="text-[12px] text-gray-500">{note ?? "-"}</span>;
 }
 
+/* Desktop table row. Details collapses below xl, actor below lg - the audit
+   story still reads without them at narrow widths. */
 function AuditRow({ event }: { event: AuditEvent }) {
-  const href = targetHref(event.targetKind, event.targetId);
   return (
-    <tr className="transition-colors hover:bg-neutral-50">
-      <td className="px-3 py-2.5 align-middle text-xs text-neutral-500">{formatDateTime(event.createdAt)}</td>
-      <td className="px-3 py-2.5 align-middle">
-        <span className="inline-flex items-center rounded-sm border border-neutral-200 bg-paper px-1.5 py-0.5 font-mono text-[10px] font-semibold text-neutral-700">
-          {actionLabel(event.action)}
+    <tr className="bg-white transition duration-75 hover:bg-gray-50">
+      <td className="px-[16px] py-[12px] align-middle">
+        <time className="block whitespace-nowrap text-[13px] text-gray-900" dateTime={event.createdAt}>
+          {formatDatePart(event.createdAt)}
+        </time>
+        <span className="block whitespace-nowrap text-[12px] text-gray-500">
+          {formatTimePart(event.createdAt)}
         </span>
       </td>
-      <td className="px-3 py-2.5 align-middle">
-        <div className="min-w-0">
-          <p className="truncate text-sm text-ink">{event.actor.name}</p>
-          <p className="truncate text-xs text-neutral-500">
-            {event.actor.email}{event.actor.role !== "admin" ? ` · ${event.actor.role}` : ""}
-          </p>
+      <td className="px-[16px] py-[12px] align-middle">
+        <ActionBadge action={event.action} />
+      </td>
+      <td className="hidden px-[16px] py-[12px] align-middle lg:table-cell">
+        <ActorIdentity actor={event.actor} />
+      </td>
+      {/* Below xl this cell takes the slack (w-full) and max-w-0 gives the inner
+          truncate a bound, so a long label ellipsizes instead of scrolling the
+          table. At xl, Details takes the slack instead and this caps at 300px -
+          a max-width rather than a width, so it can't fight Details for space. */}
+      <td className="w-full max-w-0 px-[16px] py-[12px] align-middle xl:w-auto xl:max-w-[300px]">
+        <div className="flex min-w-0 items-center gap-[8px]">
+          <TargetKindBadge kind={event.targetKind} />
+          <TargetLink event={event} />
         </div>
       </td>
-      <td className="px-3 py-2.5 align-middle">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-flex shrink-0 items-center rounded-sm bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600">
-            {event.targetKind}
-          </span>
-          {href ? (
-            <Link href={href} className="inline-flex items-center gap-1 truncate text-sm text-ink underline-offset-2 hover:underline" title={event.targetLabel}>
-              <span className="truncate">{event.targetLabel}</span>
-              <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            </Link>
-          ) : (
-            <span className="truncate text-sm text-neutral-700" title={event.targetLabel}>{event.targetLabel}</span>
-          )}
-        </div>
-      </td>
-      <td className="px-3 py-2.5 align-middle">
+      <td className="hidden px-[16px] py-[12px] align-middle xl:table-cell">
         <DiffCell diff={event.diff} note={event.note} />
       </td>
     </tr>
+  );
+}
+
+/* Mobile card. Vertical space is free here, so nothing is dropped - every
+   column from the table is present, stacked by importance. */
+function AuditCardMobile({ event }: { event: AuditEvent }) {
+  return (
+    <div className="flex flex-col gap-[10px] p-[16px]">
+      <div className="flex items-start justify-between gap-[8px]">
+        <ActionBadge action={event.action} />
+        <time className="shrink-0 text-[12px] text-gray-500" dateTime={event.createdAt}>
+          {formatDateTime(event.createdAt)}
+        </time>
+      </div>
+
+      <div className="flex min-w-0 items-center gap-[8px]">
+        <TargetKindBadge kind={event.targetKind} />
+        <TargetLink event={event} />
+      </div>
+
+      <div className="min-w-0">
+        <DiffCell diff={event.diff} note={event.note} />
+      </div>
+
+      <div className="border-t border-gray-100 pt-[10px]">
+        <ActorIdentity actor={event.actor} />
+      </div>
+    </div>
+  );
+}
+
+/* Flowbite form field - label stacked above the control so each filter keeps
+   its full width at every breakpoint. */
+function FilterField({ htmlFor, label, className, children }: {
+  htmlFor: string;
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <label htmlFor={htmlFor} className="mb-[6px] block text-[13px] font-medium text-gray-900">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 
@@ -203,86 +305,138 @@ export function AuditLogAdminClient() {
   const filtersActive = Boolean(action) || Boolean(targetKind) || Boolean(qFromUrl) || Boolean(from) || Boolean(to);
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">Audit Log</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">Every order, user, review, and coupon mutation by an admin is recorded here. Read-only.</p>
+    <div className="flex flex-col gap-[16px]">
+      <header className="flex flex-wrap items-start justify-between gap-x-[12px] gap-y-[4px]">
+        <div className="min-w-0">
+          <h1 className="text-[20px] font-bold leading-tight text-gray-900 sm:text-[24px]">Audit Log</h1>
+          <p className="mt-[4px] text-[13px] text-gray-500 sm:text-[14px]">
+            Every order, user, review, and coupon mutation by an admin is recorded here. Read-only.
+          </p>
         </div>
-        {meta ? <span className="text-sm text-neutral-400">{meta.total.toLocaleString("en-US")} events</span> : null}
+        {meta ? (
+          <span className="shrink-0 text-[13px] text-gray-500 sm:text-[14px]">
+            {meta.total.toLocaleString("en-US")} events
+          </span>
+        ) : null}
       </header>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-sm border border-neutral-200 bg-paper px-4 py-3">
-        <form onSubmit={onSubmitSearch} className="flex min-w-[180px] flex-1 items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" aria-hidden />
-            <Input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Actor, email, or target" className="pl-8" />
+      {/* Filter bar - Flowbite table toolbar */}
+      <div className="rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+        <div className="flex flex-col gap-[12px] xl:flex-row xl:items-end">
+          <form onSubmit={onSubmitSearch} className="w-full min-w-0 xl:w-[300px] xl:shrink-0">
+            <label htmlFor="audit-search" className="mb-[6px] block text-[13px] font-medium text-gray-900">
+              Search
+            </label>
+            <div className="flex items-center gap-[8px]">
+              <div className="relative min-w-0 flex-1">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+                  <Search className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+                </div>
+                <Input
+                  id="audit-search"
+                  type="search"
+                  value={qDraft}
+                  onChange={(e) => setQDraft(e.target.value)}
+                  placeholder="Actor, email, or target"
+                  className="pl-[36px]"
+                />
+              </div>
+              <Button type="submit" variant="primary" size="md" className="shrink-0">Find</Button>
+            </div>
+          </form>
+
+          {/* Stays 2-up until xl: the 256px sidebar means the content column is
+              far narrower than the viewport, so a 4-up row only fits at xl. */}
+          <div className="grid grid-cols-2 gap-[12px] xl:ml-auto xl:flex xl:items-end">
+            <FilterField htmlFor="audit-action" label="Action" className="col-span-2 min-w-0 sm:col-span-1 xl:w-[168px]">
+              <Select
+                id="audit-action"
+                value={action}
+                onChange={(e) => update({ action: e.target.value || undefined })}
+                options={ACTION_FILTERS}
+              />
+            </FilterField>
+            <FilterField htmlFor="audit-target" label="Target" className="col-span-2 min-w-0 sm:col-span-1 xl:w-[140px]">
+              <Select
+                id="audit-target"
+                value={targetKind}
+                onChange={(e) => update({ targetKind: e.target.value || undefined })}
+                options={TARGET_KIND_FILTERS}
+              />
+            </FilterField>
+            <FilterField htmlFor="audit-from" label="From" className="min-w-0 xl:w-[150px]">
+              <Input id="audit-from" type="date" value={from} onChange={(e) => update({ from: e.target.value || undefined })} />
+            </FilterField>
+            <FilterField htmlFor="audit-to" label="To" className="min-w-0 xl:w-[150px]">
+              <Input id="audit-to" type="date" value={to} onChange={(e) => update({ to: e.target.value || undefined })} />
+            </FilterField>
           </div>
-          <button type="submit" className="rounded-full border border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-neutral-400 hover:text-ink">Find</button>
-        </form>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Action</span>
-          <Select value={action} onChange={(e) => update({ action: e.target.value || undefined })} options={ACTION_FILTERS} />
         </div>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Target</span>
-          <Select value={targetKind} onChange={(e) => update({ targetKind: e.target.value || undefined })} options={TARGET_KIND_FILTERS} />
-        </div>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">From</span>
-          <Input type="date" value={from} onChange={(e) => update({ from: e.target.value || undefined })} className="w-36" />
-        </div>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">To</span>
-          <Input type="date" value={to} onChange={(e) => update({ to: e.target.value || undefined })} className="w-36" />
-        </div>
+
         {filtersActive ? (
-          <>
-            <div className="h-5 w-px bg-neutral-200" />
-            <button type="button" onClick={() => router.replace(pathname, { scroll: false })} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-ink">
-              <X className="h-3 w-3" aria-hidden /> Clear
-            </button>
-          </>
+          <div className="mt-[12px] flex justify-end border-t border-gray-100 pt-[12px]">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => router.replace(pathname, { scroll: false })}
+              className="gap-[6px]"
+            >
+              <X className="h-[14px] w-[14px]" aria-hidden /> Clear filters
+            </Button>
+          </div>
         ) : null}
       </div>
 
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper"><Spinner /></div>
+        <AdminListSkeleton rows={10} columns={4} withThumb={false} />
       ) : isError ? (
-        <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
-          <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-          <p className="text-sm text-neutral-500">{error instanceof AdminError ? error.message : "Couldn't load audit log."}</p>
+        <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white px-[16px] py-[48px] text-center shadow-sm">
+          <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+          <p className="text-[14px] text-gray-500">{error instanceof AdminError ? error.message : "Couldn't load audit log."}</p>
           <Button variant="secondary" onClick={() => refetch()}>Try again</Button>
         </div>
       ) : events.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-neutral-200 bg-paper py-14 text-center">
-          <History className="h-8 w-8 text-neutral-200" aria-hidden />
-          <p className="font-medium text-neutral-600">
+        <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 bg-white px-[16px] py-[56px] text-center">
+          <History className="h-[32px] w-[32px] text-gray-300" aria-hidden />
+          <p className="text-[14px] font-medium text-gray-600">
             {filtersActive ? "No events match these filters." : "No admin actions have been recorded yet."}
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-sm border border-neutral-200 bg-paper">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50">
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">When</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Action</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Actor</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Target</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {events.map((e) => <AuditRow key={e._id} event={e} />)}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile - one card per event */}
+          <div className="overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm md:hidden">
+            <ul className="divide-y divide-gray-100">
+              {events.map((e) => (
+                <li key={e._id}>
+                  <AuditCardMobile event={e} />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Tablet / desktop - Flowbite table */}
+          <div className="hidden overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[14px] text-gray-500">
+                <thead className="bg-gray-50 text-[12px] uppercase text-gray-500">
+                  <tr>
+                    <th scope="col" className="px-[16px] py-[12px] font-medium">When</th>
+                    <th scope="col" className="px-[16px] py-[12px] font-medium">Action</th>
+                    <th scope="col" className="hidden px-[16px] py-[12px] font-medium lg:table-cell">Actor</th>
+                    <th scope="col" className="px-[16px] py-[12px] font-medium">Target</th>
+                    {/* Takes the slack at xl so the diff has room instead of wrapping */}
+                    <th scope="col" className="hidden px-[16px] py-[12px] font-medium xl:table-cell xl:w-full">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {events.map((e) => <AuditRow key={e._id} event={e} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={(p) => update({ page: String(p) })} className="mt-2" /> : null}

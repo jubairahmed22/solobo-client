@@ -14,7 +14,8 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { Button, Input, Label, Spinner } from "@/components/ui";
+import { Button, Input, Label } from "@/components/ui";
+import { AdminFormSkeleton } from "@/components/admin/Skeleton";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
 import { ImageUploader } from "@/components/composed/ImageUploader";
 import { COMPANY } from "@/lib/entity/company";
@@ -88,27 +89,23 @@ export function BrandFormClient({ mode, id }: BrandFormClientProps) {
   } = useAdminBrand(mode === "edit" ? id : undefined);
 
   if (mode === "edit" && isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper">
-        <Spinner />
-      </div>
-    );
+    return <AdminFormSkeleton sections={2} sidebarCards={2} />;
   }
 
   if (mode === "edit" && (isError || !brand)) {
     const message =
       error instanceof AdminError ? error.message : "Couldn't load brand.";
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
-        <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-        <p className="text-sm text-neutral-500">{message}</p>
+      <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
+        <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+        <p className="text-[14px] text-gray-500">{message}</p>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => refetch()}>
             Try again
           </Button>
           <Link
             href="/admin/brands"
-            className="text-sm text-neutral-600 underline-offset-2 hover:underline"
+            className="text-[14px] text-gray-600 underline-offset-2 hover:underline"
           >
             Back to brands
           </Link>
@@ -223,73 +220,80 @@ function BrandForm({ mode, brand }: BrandFormProps) {
   const heading = mode === "create" ? "New brand" : brand?.name ?? "Edit brand";
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
+      <header className="flex flex-wrap items-end justify-between gap-[12px]">
+        <div className="flex flex-col gap-[6px]">
           <Link
             href="/admin/brands"
-            className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-ink"
+            className="inline-flex items-center gap-[6px] text-[14px] font-medium text-gray-500 transition duration-75 hover:text-[#1A56DB]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to brands
+            <ArrowLeft className="h-[16px] w-[16px]" aria-hidden /> Back to brands
           </Link>
-          <h1 className="text-2xl font-semibold text-ink">{heading}</h1>
+          <h1 className="text-[20px] font-bold leading-tight text-gray-900 sm:text-[24px]">{heading}</h1>
           {brand ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-[13px] text-gray-500 sm:text-[14px]">
               /{brand.slug} · Updated {new Date(brand.updatedAt).toLocaleDateString()}
             </p>
           ) : (
-            <p className="text-sm text-neutral-500">
+            <p className="text-[13px] text-gray-500 sm:text-[14px]">
               {nameDraft ? `Will live at /brand/${slugDraft || "…"}` : "Pick a name to get started."}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-[8px]">
           {brand ? (
+            /* Flowbite alternative button */
             <Link
               href={`/brand/${brand.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-ink hover:text-ink"
+              className="inline-flex h-[40px] items-center gap-[8px] whitespace-nowrap rounded-[8px] border border-gray-300 bg-white px-[16px] text-[14px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
             >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Preview
+              <ExternalLink className="h-[16px] w-[16px]" aria-hidden /> Preview
             </Link>
           ) : null}
           {mode === "edit" && brand ? (
-            <Button
+            /* Flowbite destructive-outline button */
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={onDelete}
               disabled={remove.isPending || update.isPending}
+              className="inline-flex h-[40px] items-center gap-[8px] whitespace-nowrap rounded-[8px] border border-red-300 bg-white px-[16px] text-[14px] font-medium text-red-600 transition duration-75 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {remove.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
               ) : (
-                <Trash2 className="h-4 w-4" aria-hidden />
+                <Trash2 className="h-[16px] w-[16px]" aria-hidden />
               )}
-              <span className="ml-1.5">Delete</span>
-            </Button>
+              Delete
+            </button>
           ) : null}
-          <Button
+          {/* Flowbite primary button */}
+          <button
             type="submit"
-            size="sm"
             disabled={(mode === "edit" && !isDirty) || create.isPending || update.isPending}
+            className="inline-flex h-[40px] items-center gap-[8px] whitespace-nowrap rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {create.isPending || update.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
             ) : (
-              <Save className="h-4 w-4" aria-hidden />
+              <Save className="h-[16px] w-[16px]" aria-hidden />
             )}
-            <span className="ml-1.5">{mode === "create" ? "Create" : "Save"}</span>
-          </Button>
+            {mode === "create" ? "Create" : (
+              <>
+                <span className="xs:hidden">Save</span>
+                <span className="hidden xs:inline">Save changes</span>
+              </>
+            )}
+          </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[1fr_320px]">
         {/* Main column */}
-        <div className="flex flex-col gap-4">
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Basics</h2>
+        <div className="flex flex-col gap-[16px]">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Basics</h2>
             <Field label="Name" error={errors.name?.message}>
               <Input invalid={!!errors.name} {...register("name")} />
             </Field>
@@ -312,8 +316,8 @@ function BrandForm({ mode, brand }: BrandFormProps) {
             </Field>
           </section>
 
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Imagery</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Imagery</h2>
             <Controller
               control={control}
               name="logo"
@@ -362,8 +366,8 @@ function BrandForm({ mode, brand }: BrandFormProps) {
             />
           </section>
 
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">SEO</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">SEO</h2>
             <Field
               label="Meta title"
               error={errors.metaTitle?.message}
@@ -378,9 +382,9 @@ function BrandForm({ mode, brand }: BrandFormProps) {
         </div>
 
         {/* Side column */}
-        <aside className="flex flex-col gap-4">
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Visibility</h2>
+        <aside className="flex flex-col gap-[16px]">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Visibility</h2>
             <CheckboxField
               label="Active"
               hint="Hidden brands disappear from filters and product cards."
@@ -397,15 +401,15 @@ function BrandForm({ mode, brand }: BrandFormProps) {
           </section>
 
           {brand ? (
-            <section className="flex flex-col gap-2 rounded-sm border border-neutral-200 bg-paper p-3 text-xs text-neutral-500">
-              <h2 className="text-sm font-semibold text-ink">Meta</h2>
+            <section className="flex flex-col gap-[8px] rounded-[8px] border border-gray-200 bg-white p-[16px] text-[13px] text-gray-500 shadow-sm">
+              <h2 className="text-[18px] font-semibold text-gray-900">Meta</h2>
               <div className="flex items-center justify-between">
                 <span>Created</span>
-                <span>{new Date(brand.createdAt).toLocaleDateString()}</span>
+                <span className="text-gray-900">{new Date(brand.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Updated</span>
-                <span>{new Date(brand.updatedAt).toLocaleDateString()}</span>
+                <span className="text-gray-900">{new Date(brand.updatedAt).toLocaleDateString()}</span>
               </div>
             </section>
           ) : null}
@@ -425,7 +429,7 @@ function BrandForm({ mode, brand }: BrandFormProps) {
 /* ── Primitives ── */
 
 const textareaClass =
-  "block w-full rounded-sm border border-neutral-200 bg-paper px-2.5 py-1.5 text-sm text-ink placeholder:text-neutral-400 focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1";
+  "block w-full rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] py-[10px] text-[14px] font-normal text-gray-900 placeholder:text-gray-400 focus:border-[#1A56DB] focus:bg-white focus:outline-none";
 
 interface FieldProps {
   label: string;
@@ -436,13 +440,13 @@ interface FieldProps {
 
 function Field({ label, hint, error, children }: FieldProps) {
   return (
-    <Label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+    <Label className="flex flex-col gap-[8px]">
+      <span className="text-[14px] font-medium text-gray-900">{label}</span>
       {children}
       {error ? (
-        <span className="text-xs text-ink">{error}</span>
+        <span className="text-[13px] font-medium text-red-600">{error}</span>
       ) : hint ? (
-        <span className="text-xs text-neutral-400">{hint}</span>
+        <span className="text-[13px] text-gray-500">{hint}</span>
       ) : null}
     </Label>
   );
@@ -452,16 +456,16 @@ const CheckboxField = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }
 >(({ label, hint, ...props }, ref) => (
-  <label className="flex items-start gap-3">
+  <label className="flex items-start gap-[12px]">
     <input
       ref={ref}
       type="checkbox"
-      className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-ink focus-visible:ring-1 focus-visible:ring-ink focus-visible:ring-offset-1"
+      className="mt-[2px] h-[18px] w-[18px] shrink-0 rounded border-gray-300 accent-[#1A56DB]"
       {...props}
     />
-    <span className="flex flex-col gap-0.5">
-      <span className="text-sm text-ink">{label}</span>
-      {hint ? <span className="text-xs text-neutral-400">{hint}</span> : null}
+    <span className="flex flex-col gap-[2px]">
+      <span className="text-[14px] font-medium text-gray-900">{label}</span>
+      {hint ? <span className="text-[13px] text-gray-500">{hint}</span> : null}
     </span>
   </label>
 ));

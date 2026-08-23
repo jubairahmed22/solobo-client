@@ -85,7 +85,14 @@ function niceCeil(value: number): number {
   return nice * pow;
 }
 
+/* Flowbite-style chart colors - validated pair (line #1A56DB / bars #76A9FA
+ * on white). The legend + native tooltips + the caller's totals header carry
+ * identity and values, so the light bars never rely on color alone. */
+const LINE_COLOR = "#1A56DB";
+const BAR_COLOR = "#76A9FA";
+
 export function SalesChartSvg({ series, windowDays }: SalesChartSvgProps) {
+  const gradientId = `sales-area-${React.useId().replace(/:/g, "")}`;
   // Virtual canvas - scales responsively via `viewBox`. Coordinates are in
   // "px" but the actual rendered size is driven by the container width.
   const W = 800;
@@ -148,108 +155,142 @@ export function SalesChartSvg({ series, windowDays }: SalesChartSvgProps) {
   const barWidth = Math.max(2, slotWidth * 0.55);
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-label={`Daily sales over the last ${windowDays} days`}
-      className="h-48 w-full sm:h-56"
-    >
-      {/* Y gridlines + tick labels */}
-      {yTicks.map((t, i) => (
-        <g key={`y-${i}`}>
-          <line
-            x1={mLeft}
-            x2={W - mRight}
-            y1={t.y}
-            y2={t.y}
-            className="stroke-neutral-200"
-            strokeWidth={1}
-            strokeDasharray={i === 0 ? undefined : "2 3"}
-          />
+    <div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label={`Daily sales over the last ${windowDays} days`}
+        className="h-48 w-full sm:h-56"
+      >
+        <defs>
+          {/* Flowbite-style soft area fade under the revenue line */}
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.32} />
+            <stop offset="100%" stopColor={LINE_COLOR} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+
+        {/* Y gridlines + tick labels */}
+        {yTicks.map((t, i) => (
+          <g key={`y-${i}`}>
+            {i > 0 && (
+              <line
+                x1={mLeft}
+                x2={W - mRight}
+                y1={t.y}
+                y2={t.y}
+                className="stroke-gray-200"
+                strokeWidth={1}
+              />
+            )}
+            <text
+              x={mLeft - 6}
+              y={t.y + 3}
+              textAnchor="end"
+              className="fill-gray-500"
+              style={{ fontSize: 11, fontVariantNumeric: "tabular-nums" }}
+            >
+              {formatMoneyShort(t.value)}
+            </text>
+          </g>
+        ))}
+
+        {/* Bars - order count */}
+        {series.map((p, i) => {
+          if (p.orderCount === 0) return null;
+          const top = yOrders(p.orderCount);
+          const height = mTop + plotH - top;
+          return (
+            <rect
+              key={`bar-${p.date}`}
+              x={xCentre(i) - barWidth / 2}
+              y={top}
+              width={barWidth}
+              height={Math.max(1, height)}
+              rx={2}
+              fill={BAR_COLOR}
+            >
+              <title>{`${p.date} · ${p.orderCount} ${p.orderCount === 1 ? "order" : "orders"}`}</title>
+            </rect>
+          );
+        })}
+
+        {/* Revenue area + line */}
+        {n > 0 && (
+          <>
+            <path d={areaPath} fill={`url(#${gradientId})`} />
+            <path
+              d={linePath}
+              stroke={LINE_COLOR}
+              strokeWidth={2}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </>
+        )}
+
+        {/* Revenue dots - only on days with any revenue, keeps zero-days quiet.
+            White ring keeps dots readable where they cross the bars. */}
+        {series.map((p, i) =>
+          p.revenue > 0 ? (
+            <circle
+              key={`dot-${p.date}`}
+              cx={xCentre(i)}
+              cy={yRevenue(p.revenue)}
+              r={2.5}
+              fill={LINE_COLOR}
+              stroke="#FFFFFF"
+              strokeWidth={1.5}
+            >
+              <title>{`${p.date} · revenue ${formatMoneyShort(p.revenue)}`}</title>
+            </circle>
+          ) : null,
+        )}
+
+        {/* X-axis tick labels */}
+        {tickIndices.map((i) => (
           <text
-            x={mLeft - 6}
-            y={t.y + 3}
-            textAnchor="end"
-            className="fill-neutral-500"
-            style={{ fontSize: 10, fontVariantNumeric: "tabular-nums" }}
+            key={`x-${i}`}
+            x={xCentre(i)}
+            y={H - 10}
+            textAnchor="middle"
+            className="fill-gray-500"
+            style={{ fontSize: 11 }}
           >
-            {formatMoneyShort(t.value)}
+            {formatTickLabel(series[i]?.date ?? "", windowDays)}
           </text>
-        </g>
-      ))}
+        ))}
 
-      {/* Bars - order count */}
-      {series.map((p, i) => {
-        if (p.orderCount === 0) return null;
-        const top = yOrders(p.orderCount);
-        const height = mTop + plotH - top;
-        return (
-          <rect
-            key={`bar-${p.date}`}
-            x={xCentre(i) - barWidth / 2}
-            y={top}
-            width={barWidth}
-            height={Math.max(1, height)}
-            className="fill-neutral-200"
-          >
-            <title>{`${p.date} · ${p.orderCount} ${p.orderCount === 1 ? "order" : "orders"}`}</title>
-          </rect>
-        );
-      })}
+        {/* Plot baseline */}
+        <line
+          x1={mLeft}
+          x2={W - mRight}
+          y1={mTop + plotH}
+          y2={mTop + plotH}
+          className="stroke-gray-300"
+          strokeWidth={1}
+        />
+      </svg>
 
-      {/* Revenue area + line */}
-      {n > 0 && (
-        <>
-          <path d={areaPath} className="fill-ink/5" />
-          <path
-            d={linePath}
-            className="stroke-ink"
-            strokeWidth={1.5}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      {/* Legend - two measures share the plot, so identity is never
+          color-alone. */}
+      <div className="mt-[8px] flex items-center justify-center gap-[16px]" aria-hidden>
+        <span className="inline-flex items-center gap-[6px] text-[12px] text-gray-500">
+          <span
+            className="inline-block h-[3px] w-[14px] rounded-full"
+            style={{ backgroundColor: LINE_COLOR }}
           />
-        </>
-      )}
-
-      {/* Revenue dots - only on days with any revenue, keeps zero-days quiet */}
-      {series.map((p, i) =>
-        p.revenue > 0 ? (
-          <circle
-            key={`dot-${p.date}`}
-            cx={xCentre(i)}
-            cy={yRevenue(p.revenue)}
-            r={2}
-            className="fill-ink"
-          >
-            <title>{`${p.date} · revenue ${formatMoneyShort(p.revenue)}`}</title>
-          </circle>
-        ) : null,
-      )}
-
-      {/* X-axis tick labels */}
-      {tickIndices.map((i) => (
-        <text
-          key={`x-${i}`}
-          x={xCentre(i)}
-          y={H - 10}
-          textAnchor="middle"
-          className="fill-neutral-500"
-          style={{ fontSize: 10 }}
-        >
-          {formatTickLabel(series[i]?.date ?? "", windowDays)}
-        </text>
-      ))}
-
-      {/* Plot baseline */}
-      <line
-        x1={mLeft}
-        x2={W - mRight}
-        y1={mTop + plotH}
-        y2={mTop + plotH}
-        className="stroke-ink"
-        strokeWidth={1}
-      />
-    </svg>
+          Revenue
+        </span>
+        <span className="inline-flex items-center gap-[6px] text-[12px] text-gray-500">
+          <span
+            className="inline-block h-[10px] w-[10px] rounded-[2px]"
+            style={{ backgroundColor: BAR_COLOR }}
+          />
+          Orders
+        </span>
+      </div>
+    </div>
   );
 }

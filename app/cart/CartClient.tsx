@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import { Trash2, ShoppingCart, Tag, AlertTriangle, Truck, Lock, ChevronLeft } from "lucide-react";
 import { Button, Spinner } from "@/components/ui";
 import { buttonVariants } from "@/components/ui/Button";
-import { useCartStore, type CartItem } from "@/store/cartStore";
+import { useCartStore, type CartItem, type CartAddOn } from "@/store/cartStore";
 import {
   useServerCart,
   useUpdateCartItem,
@@ -18,6 +18,9 @@ import {
   useClearCart,
 } from "@/hooks/useCommerce";
 import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
+import { usePublicCustomizations } from "@/hooks/useCustomizations";
+import { deriveAddOns } from "@/lib/utils/cartAddOns";
+import type { PublicCustomizationConfig } from "@/types/customization";
 import { useUIStore } from "@/store/uiStore";
 import { trackBeginCheckout } from "@/lib/analytics";
 import { formatPrice } from "@/lib/utils/format";
@@ -56,9 +59,16 @@ interface UnifiedItem {
   qty: number;
   options?: Record<string, string>;
   stock?: number;
+  /** Unit price before customization add-ons (only set on customized lines). */
+  basePrice?: number;
+  /** Per-unit customization charges included in `price`. */
+  addOns?: CartAddOn[];
 }
 
-function unifyServerItem(item: ServerCartItem): UnifiedItem {
+function unifyServerItem(
+  item: ServerCartItem,
+  customizations: PublicCustomizationConfig | null | undefined,
+): UnifiedItem {
   return {
     id: item._id,
     productId: item.product,
@@ -70,6 +80,12 @@ function unifyServerItem(item: ServerCartItem): UnifiedItem {
     qty: item.qty,
     options: item.options,
     stock: item.stock,
+    // Prefer the breakdown the server snapshotted at add-time; fall back to
+    // re-deriving it from the options for lines added before the snapshot
+    // fields existed.
+    ...(item.addOns && item.addOns.length > 0
+      ? { basePrice: item.basePrice, addOns: item.addOns }
+      : deriveAddOns(item.price, item.options, customizations)),
   };
 }
 
@@ -97,6 +113,8 @@ function unifyLocalItem(item: CartItem): UnifiedItem {
     qty: item.qty,
     options,
     stock: item.stock,
+    basePrice: item.basePrice,
+    addOns: item.addOns,
   };
 }
 
@@ -145,8 +163,12 @@ export function CartClient() {
   const serverItemRows = isAuthed ? serverCart?.items ?? [] : [];
   const usingServer = serverItemRows.length > 0;
 
+  // Public customization config - only needed to rebuild the add-on cost
+  // breakdown for server-cart rows (local rows carry their own breakdown).
+  const { data: customizations } = usePublicCustomizations(usingServer);
+
   const items: UnifiedItem[] = usingServer
-    ? serverItemRows.map(unifyServerItem)
+    ? serverItemRows.map((row) => unifyServerItem(row, customizations))
     : localItems.map(unifyLocalItem);
 
   const subtotal = usingServer
@@ -244,35 +266,34 @@ export function CartClient() {
 
   return (
     <>
-    <div className="mt-4 grid grid-cols-1 gap-4 pb-24 sm:pb-0 sm:grid-cols-[1fr_260px] lg:grid-cols-[1fr_340px]">
+    <div className="pb-24 sm:pb-0">
+      <h1 className="text-[20px] font-semibold text-gray-900 sm:text-[24px]">Shopping cart</h1>
+      <div className="mt-[16px] grid grid-cols-1 items-start gap-[16px] sm:grid-cols-[1fr_280px] lg:grid-cols-[1fr_360px]">
       <section>
-        <div className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+        <div className="overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm">
 
           {/* Card header */}
-          <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3.5 sm:px-5 sm:py-4">
-            <h2 className="text-sm font-bold tracking-tight text-ink sm:text-lg">
-              Shopping Cart
-              <span className="ml-1.5 text-xs font-normal text-neutral-400 sm:ml-2 sm:text-sm">
-                ({itemCount} {itemCount === 1 ? "item" : "items"})
-              </span>
+          <div className="flex items-center justify-between border-b border-gray-100 px-[16px] py-[12px]">
+            <h2 className="text-[14px] font-semibold text-gray-900">
+              {itemCount} {itemCount === 1 ? "item" : "items"}
             </h2>
             <button
               type="button"
               onClick={onClear}
-              className="shrink-0 text-xs font-medium text-neutral-400 transition-colors hover:text-red-500"
+              className="shrink-0 text-[13px] font-medium text-gray-500 transition-colors hover:text-red-600"
             >
               Clear all
             </button>
           </div>
 
-          <ul className="divide-y divide-neutral-50">
+          <ul className="divide-y divide-gray-100">
             {items.map((it) => (
-              <li key={it.id} className="flex gap-2.5 px-3 py-3 sm:gap-4 sm:px-5 sm:py-5">
+              <li key={it.id} className="flex gap-[12px] p-[16px]">
 
                 {/* Product image */}
                 <Link
                   href={`/product/${it.slug}`}
-                  className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-xl bg-neutral-100 sm:h-[100px] sm:w-[100px]"
+                  className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[8px] border border-gray-100 bg-gray-50 sm:h-[96px] sm:w-[96px]"
                 >
                   {it.image ? (
                     <Image
@@ -287,19 +308,19 @@ export function CartClient() {
 
                 {/* Info */}
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-[12px]">
                     <Link
                       href={`/product/${it.slug}`}
-                      className="line-clamp-2 flex-1 text-[13px] font-semibold leading-snug text-ink underline-offset-2 hover:underline sm:text-sm"
+                      className="line-clamp-2 flex-1 text-[14px] font-semibold leading-snug text-gray-900 underline-offset-2 hover:text-accent hover:underline"
                     >
                       {it.title}
                     </Link>
                     <div className="shrink-0 text-right">
-                      <p className="text-sm font-bold text-ink">
+                      <p className="text-[15px] font-bold text-gray-900">
                         {formatPrice(it.price * it.qty, currency)}
                       </p>
                       {it.originalPrice && it.originalPrice > it.price ? (
-                        <p className="text-[11px] text-neutral-400 line-through">
+                        <p className="text-[12px] text-gray-400 line-through">
                           {formatPrice(it.originalPrice * it.qty, currency)}
                         </p>
                       ) : null}
@@ -307,32 +328,59 @@ export function CartClient() {
                   </div>
 
                   {it.options && Object.keys(it.options).length > 0 ? (
-                    <p className="text-[11px] text-neutral-400">
+                    <p className="text-[12px] text-gray-500">
                       {Object.entries(it.options).map(([k, v]) => `${k}: ${v}`).join(" · ")}
                     </p>
                   ) : null}
 
+                  {/* Customization cost breakdown - shows where the extra
+                      money on a personalised line comes from. */}
+                  {it.addOns && it.addOns.length > 0 ? (
+                    <div className="mt-[4px] flex flex-col gap-px rounded-[6px] border border-gray-200 bg-gray-50 px-[8px] py-[6px] text-[12px]">
+                      <div className="flex justify-between text-gray-500">
+                        <span>Base price</span>
+                        <span className="tabular-nums">
+                          {formatPrice(
+                            it.basePrice ?? Math.max(0, it.price - it.addOns.reduce((s, a) => s + a.amount, 0)),
+                            currency,
+                          )}
+                        </span>
+                      </div>
+                      {it.addOns.map((a, ai) => (
+                        <div key={ai} className="flex justify-between text-gray-500">
+                          <span>+ {a.label}</span>
+                          <span className="tabular-nums">{formatPrice(a.amount, currency)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between border-t border-gray-200 pt-px font-medium text-gray-900">
+                        <span>Per item</span>
+                        <span className="tabular-nums">{formatPrice(it.price, currency)}</span>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {it.stock !== undefined && it.stock <= 5 ? (
-                    <span className="text-[11px] font-medium text-amber-500">
+                    <span className="text-[12px] font-medium text-yellow-600">
                       Only {it.stock} left in stock
                     </span>
                   ) : (
-                    <span className="text-[11px] font-medium text-green-600">In stock</span>
+                    <span className="text-[12px] font-medium text-green-600">In stock</span>
                   )}
 
-                  {/* Qty stepper + remove */}
-                  <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-                    <div className="flex h-9 items-center overflow-hidden rounded-full border border-neutral-200 bg-neutral-50">
+                  {/* Qty stepper + remove - Flowbite joined stepper */}
+                  <div className="mt-[8px] flex items-center gap-[12px]">
+                    <div className="inline-flex h-[32px]">
                       <button
                         type="button"
                         onClick={() => onQtyChange(it, it.qty - 1)}
                         disabled={it.qty <= 1}
                         aria-label="Decrease quantity"
-                        className="flex h-full w-9 items-center justify-center text-sm text-ink transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-30"
+                        style={{ borderRadius: "8px 0 0 8px" }}
+                        className="flex h-[32px] w-[32px] items-center justify-center border border-gray-300 bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         −
                       </button>
-                      <span className="w-[32px] select-none text-center text-sm font-bold text-ink">
+                      <span className="flex h-[32px] w-[40px] select-none items-center justify-center border-y border-gray-300 bg-gray-50 text-[14px] font-semibold text-gray-900">
                         {it.qty}
                       </span>
                       <button
@@ -340,21 +388,20 @@ export function CartClient() {
                         onClick={() => onQtyChange(it, it.qty + 1)}
                         disabled={it.stock !== undefined && it.qty >= it.stock}
                         aria-label="Increase quantity"
-                        className="flex h-full w-9 items-center justify-center text-sm text-ink transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-30"
+                        style={{ borderRadius: "0 8px 8px 0" }}
+                        className="flex h-[32px] w-[32px] items-center justify-center border border-gray-300 bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         +
                       </button>
                     </div>
 
-                    <div aria-hidden className="hidden h-3.5 w-px bg-neutral-200 sm:block" />
-
                     <button
                       type="button"
                       onClick={() => onRemove(it)}
                       aria-label={`Remove ${it.title}`}
-                      className="flex items-center gap-1 text-[11px] font-medium text-neutral-400 transition-colors hover:text-red-500"
+                      className="inline-flex items-center gap-[4px] text-[13px] font-medium text-gray-500 transition-colors hover:text-red-600"
                     >
-                      <Trash2 className="h-3 w-3" aria-hidden />
+                      <Trash2 className="h-[14px] w-[14px]" aria-hidden />
                       Remove
                     </button>
                   </div>
@@ -364,17 +411,17 @@ export function CartClient() {
           </ul>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-3 border-t border-neutral-100 px-4 py-3 sm:px-5 sm:py-3.5">
+          <div className="flex items-center justify-between gap-[12px] border-t border-gray-100 px-[16px] py-[12px]">
             <Link
               href="/all-products"
-              className="flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs text-neutral-400 transition-colors hover:text-ink"
+              className="flex shrink-0 items-center gap-[4px] whitespace-nowrap text-[13px] font-medium text-gray-500 transition-colors hover:text-accent"
             >
-              <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+              <ChevronLeft className="h-[16px] w-[16px]" aria-hidden />
               Continue shopping
             </Link>
-            <p className="shrink-0 whitespace-nowrap text-sm text-neutral-600">
+            <p className="shrink-0 whitespace-nowrap text-[14px] text-gray-500">
               Subtotal:{" "}
-              <span className="font-bold text-ink">{formatPrice(subtotal, currency)}</span>
+              <span className="font-bold text-gray-900">{formatPrice(subtotal, currency)}</span>
             </p>
           </div>
         </div>
@@ -405,18 +452,19 @@ export function CartClient() {
         removingCoupon={removeCouponServer.isPending}
         isAuthed={isAuthed}
       />
+      </div>
     </div>
 
     {/* Mobile sticky checkout bar */}
-    <div className="fixed bottom-0 left-0 right-0 z-30 flex items-center gap-3 bg-white px-4 pt-3 shadow-[0_-1px_0_rgba(0,0,0,0.06),0_-8px_24px_rgba(0,0,0,0.08)] sm:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+    <div className="fixed bottom-0 left-0 right-0 z-30 flex items-center gap-[12px] border-t border-gray-200 bg-white px-[16px] pt-[12px] shadow-[0_-4px_16px_rgba(0,0,0,0.08)] sm:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] text-neutral-400">
+        <p className="text-[12px] text-gray-500">
           {itemCount} {itemCount === 1 ? "item" : "items"}
         </p>
-        <p className="text-base font-bold text-ink">{formatPrice(total, currency)}</p>
+        <p className="text-[16px] font-bold text-gray-900">{formatPrice(total, currency)}</p>
       </div>
-      <Button variant="accent" onClick={onCheckout} size="md" className="shrink-0 rounded-xl">
-        <ShoppingCart className="h-[14px] w-[14px]" aria-hidden />
+      <Button variant="accent" onClick={onCheckout} size="md" className="shrink-0 rounded-[8px]">
+        <ShoppingCart className="h-[16px] w-[16px]" aria-hidden />
         <span className="ml-1.5">Checkout</span>
       </Button>
     </div>
@@ -482,32 +530,33 @@ function Summary({
     !!cart?.couponCode && !appliedCoupon && !!couponError;
 
   return (
-    <aside className="self-start overflow-hidden rounded-2xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.06)] sm:sticky sm:top-20">
+    <aside className="self-start overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm sm:sticky sm:top-20">
 
       {/* ── CTA + price ── */}
-      <div className="p-4 sm:p-5">
-        <div className="mb-4 flex items-baseline justify-between">
-          <p className="text-sm text-neutral-400">
+      <div className="p-[16px]">
+        <h2 className="text-[16px] font-semibold text-gray-900">Order summary</h2>
+        <div className="mb-[16px] mt-[8px] flex items-baseline justify-between">
+          <p className="text-[14px] text-gray-500">
             {itemCount} {itemCount === 1 ? "item" : "items"}
           </p>
-          <p className="text-xl font-bold text-ink">{formatPrice(total, currency)}</p>
+          <p className="text-[20px] font-bold text-gray-900">{formatPrice(total, currency)}</p>
         </div>
 
-        <Button variant="accent" onClick={onCheckout} size="md" fullWidth>
-          <ShoppingCart className="h-[14px] w-[14px]" aria-hidden />
+        <Button variant="accent" onClick={onCheckout} size="md" fullWidth className="rounded-[8px]">
+          <ShoppingCart className="h-[16px] w-[16px]" aria-hidden />
           <span className="ml-1.5">Proceed to Checkout</span>
         </Button>
 
-        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-neutral-400">
-          <Lock className="h-3 w-3" aria-hidden />
+        <div className="mt-[12px] flex items-center justify-center gap-[6px] text-[12px] text-gray-400">
+          <Lock className="h-[12px] w-[12px]" aria-hidden />
           Secure &amp; encrypted checkout
         </div>
 
         {!isAuthed ? (
-          <p className="mt-2 text-center text-xs text-neutral-400">
+          <p className="mt-[8px] text-center text-[13px] text-gray-500">
             <Link
               href="/login?next=/checkout"
-              className="font-semibold text-ink underline underline-offset-2 hover:opacity-70"
+              className="font-semibold text-gray-900 underline underline-offset-2 hover:opacity-70"
             >
               Sign in
             </Link>{" "}
@@ -518,25 +567,25 @@ function Summary({
 
       {/* ── Free delivery progress ── */}
       {freeThreshold > 0 ? (
-        <div className="border-t border-neutral-100 px-4 py-3.5 sm:px-5 sm:py-4">
-          <div className="mb-2.5 flex items-center justify-between gap-2 text-xs">
-            <span className="flex items-center gap-1.5 font-medium text-neutral-600">
-              <Truck className="h-3.5 w-3.5 shrink-0 text-neutral-400" aria-hidden />
+        <div className="border-t border-gray-100 px-[16px] py-[12px]">
+          <div className="mb-[10px] flex items-center justify-between gap-[8px] text-[12px]">
+            <span className="flex items-center gap-[6px] font-medium text-gray-600">
+              <Truck className="h-[14px] w-[14px] shrink-0 text-gray-400" aria-hidden />
               {isFree ? (
                 <span className="font-semibold text-green-600">Free delivery unlocked!</span>
               ) : (
                 <span>
                   Add{" "}
-                  <span className="font-semibold text-ink">
+                  <span className="font-semibold text-gray-900">
                     {formatPrice(amountToFree, currency)}
                   </span>{" "}
                   more for free delivery
                 </span>
               )}
             </span>
-            <span className="shrink-0 text-neutral-400">{formatPrice(freeThreshold, currency)}</span>
+            <span className="shrink-0 text-gray-400">{formatPrice(freeThreshold, currency)}</span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+          <div className="h-[6px] w-full overflow-hidden rounded-full bg-gray-100">
             <div
               className={`h-full rounded-full transition-all duration-500 ${isFree ? "bg-green-500" : "bg-accent"}`}
               style={{ width: `${progressPct}%` }}
@@ -550,46 +599,43 @@ function Summary({
       ) : null}
 
       {/* ── Price breakdown ── */}
-      <div className="border-t border-neutral-100 px-4 pb-3 pt-4 sm:px-5">
-        <h2 className="mb-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
-          Order Summary
-        </h2>
-        <div className="flex flex-col gap-2.5 text-sm">
+      <div className="border-t border-gray-100 px-[16px] py-[16px]">
+        <div className="flex flex-col gap-[10px] text-[14px]">
           <div className="flex justify-between">
-            <span className="text-neutral-500">Subtotal</span>
-            <span className="font-medium text-ink">{formatPrice(subtotal, currency)}</span>
+            <span className="text-gray-500">Subtotal</span>
+            <span className="font-medium text-gray-900">{formatPrice(subtotal, currency)}</span>
           </div>
           {appliedCoupon ? (
             <div className="flex justify-between">
-              <span className="text-neutral-500">Discount</span>
+              <span className="text-gray-500">Discount</span>
               <span className="font-medium text-green-600">
                 −{formatPrice(discount, currency)}
               </span>
             </div>
           ) : null}
           <div className="flex justify-between">
-            <span className="text-neutral-500">Shipping</span>
+            <span className="text-gray-500">Shipping</span>
             {isFree ? (
               <span className="font-semibold text-green-600">Free</span>
             ) : freeThreshold > 0 ? (
-              <span className="text-neutral-400">
+              <span className="text-gray-400">
                 {formatPrice(insideDhaka, currency)}–{formatPrice(outsideDhaka, currency)}
               </span>
             ) : (
-              <span className="text-neutral-400">Calculated at checkout</span>
+              <span className="text-gray-400">Calculated at checkout</span>
             )}
           </div>
         </div>
       </div>
 
       {/* ── Coupon ── */}
-      <div className="border-t border-neutral-100 px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="border-t border-gray-100 px-[16px] py-[12px]">
         {isAuthed && appliedCoupon ? (
-          <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-3 py-2.5">
-            <span className="flex items-center gap-2 text-sm">
-              <Tag className="h-3.5 w-3.5 text-green-600" aria-hidden />
+          <div className="flex items-center justify-between rounded-[8px] border border-green-200 bg-green-50 px-[12px] py-[10px]">
+            <span className="flex items-center gap-[8px] text-[14px]">
+              <Tag className="h-[14px] w-[14px] text-green-600" aria-hidden />
               <span className="font-bold text-green-800">{appliedCoupon.code}</span>
-              <span className="text-xs text-green-600">
+              <span className="text-[12px] text-green-600">
                 {appliedCoupon.type === "percent"
                   ? `${appliedCoupon.value}% off`
                   : `${formatPrice(appliedCoupon.value, currency)} off`}
@@ -599,15 +645,15 @@ function Summary({
               type="button"
               onClick={onRemoveCoupon}
               disabled={removingCoupon}
-              className="text-xs text-neutral-400 transition-colors hover:text-red-500 disabled:opacity-50"
+              className="text-[13px] font-medium text-gray-500 transition-colors hover:text-red-600 disabled:opacity-50"
             >
               Remove
             </button>
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 transition-colors focus-within:border-neutral-400 focus-within:bg-white">
-              <Tag className="h-3.5 w-3.5 shrink-0 text-neutral-300" aria-hidden />
+            <div className="flex items-center gap-[8px] overflow-hidden rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] py-[8px] transition-colors focus-within:border-accent focus-within:bg-white">
+              <Tag className="h-[16px] w-[16px] shrink-0 text-gray-400" aria-hidden />
               <input
                 value={couponInput}
                 onChange={(e) => onCouponInputChange(e.target.value)}
@@ -615,19 +661,19 @@ function Summary({
                 placeholder="Enter coupon code"
                 aria-label="Coupon code"
                 aria-invalid={!!couponFormError || undefined}
-                className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-neutral-400"
+                className="min-w-0 flex-1 bg-transparent text-[14px] text-gray-900 outline-none placeholder:text-gray-400"
               />
               <button
                 type="button"
                 onClick={onApplyCoupon}
                 disabled={applyingCoupon || !couponInput.trim()}
-                className="shrink-0 text-xs font-bold uppercase tracking-widest text-accent transition-colors hover:opacity-70 disabled:text-neutral-300"
+                className="shrink-0 text-[13px] font-semibold text-accent transition-colors hover:opacity-70 disabled:text-gray-300"
               >
                 {applyingCoupon ? "…" : "Apply"}
               </button>
             </div>
             {couponFormError ? (
-              <p className="mt-1.5 text-xs text-red-500" role="alert">
+              <p className="mt-[6px] text-[12px] text-red-600" role="alert">
                 {couponFormError}
               </p>
             ) : null}
@@ -635,13 +681,13 @@ function Summary({
         )}
 
         {hasStaleCode ? (
-          <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden />
+          <div className="mt-[10px] flex items-start gap-[8px] rounded-[8px] border border-yellow-200 bg-yellow-50 p-[12px] text-[12px]">
+            <AlertTriangle className="mt-[2px] h-[14px] w-[14px] shrink-0 text-yellow-500" aria-hidden />
             <div className="flex-1">
-              <p className="font-semibold text-ink">
+              <p className="font-semibold text-gray-900">
                 Coupon &ldquo;{cart?.couponCode}&rdquo; no longer applies
               </p>
-              <p className="mt-0.5 text-neutral-500">{couponError?.message}</p>
+              <p className="mt-[2px] text-gray-500">{couponError?.message}</p>
             </div>
             <button
               type="button"
@@ -656,11 +702,11 @@ function Summary({
       </div>
 
       {/* ── Total ── */}
-      <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-3.5 sm:px-5 sm:py-4">
-        <span className="text-base font-bold text-ink">Total</span>
+      <div className="flex items-center justify-between border-t border-gray-200 px-[16px] py-[12px]">
+        <span className="text-[16px] font-bold text-gray-900">Total</span>
         <div className="text-right">
-          <p className="text-lg font-bold text-ink">{formatPrice(total, currency)}</p>
-          <p className="text-[10px] text-neutral-400">Incl. all taxes</p>
+          <p className="text-[18px] font-bold text-gray-900">{formatPrice(total, currency)}</p>
+          <p className="text-[11px] text-gray-400">Incl. all taxes</p>
         </div>
       </div>
     </aside>
@@ -671,19 +717,19 @@ function Summary({
 
 function EmptyCart() {
   return (
-    <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-14 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-100">
-        <ShoppingCart className="h-6 w-6 text-neutral-400" aria-hidden />
+    <div className="mt-[24px] flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white px-[24px] py-[56px] text-center shadow-sm">
+      <div className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-gray-100">
+        <ShoppingCart className="h-[24px] w-[24px] text-gray-400" aria-hidden />
       </div>
       <div>
-        <p className="text-base font-bold text-ink">Your cart is empty</p>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="text-[16px] font-semibold text-gray-900">Your cart is empty</p>
+        <p className="mt-[4px] text-[14px] text-gray-500">
           Looks like you haven&apos;t added anything yet.
         </p>
       </div>
       <Link
         href="/all-products"
-        className={buttonVariants({ variant: "accent", size: "md", className: "mt-1 rounded-xl" })}
+        className={buttonVariants({ variant: "accent", size: "md", className: "mt-[4px] rounded-[8px]" })}
       >
         Start shopping
       </Link>

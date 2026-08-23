@@ -97,6 +97,16 @@ export interface ProductImage {
   order?: number;
 }
 
+/** Single optional Cloudinary-hosted product video. */
+export interface ProductVideo {
+  url: string;
+  publicId?: string;
+  /** First-frame jpg derived from the video URL - used as the player poster. */
+  posterUrl?: string;
+  /** Length in seconds, as reported by Cloudinary at upload time. */
+  duration?: number;
+}
+
 export interface ProductVariant {
   _id?: string;
   sku: string;
@@ -151,6 +161,15 @@ export interface ProductSummary {
 
 export interface ProductDetail extends Omit<ProductSummary, "category"> {
   description?: string;
+  /**
+   * Seller-entered unit cost of goods, for margin reporting only. Admin/
+   * seller-only - the public catalog endpoints strip this field before
+   * responding, so it's never present outside authenticated admin/seller
+   * reads (`AdminProductDetail`, seller product forms).
+   */
+  costPrice?: number;
+  /** Optional single product video, shown in the PDP gallery. */
+  video?: ProductVideo | null;
   /**
    * Primary category - populated with its ancestor chain on the detail
    * endpoint so the PDP can render the full breadcrumb (Skin → Face →

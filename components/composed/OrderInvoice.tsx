@@ -104,6 +104,8 @@ export interface OrderInvoiceProps {
   };
   /** Store name shown in the header - defaults to COMPANY.name. */
   storeName?: string;
+  /** Logo shown in the header - omit to render the text-only letterhead. Caller resolves the invoiceLogo/companyLogo fallback (see SiteSettings). */
+  logoUrl?: string;
 }
 
 /* ───────────────────── Helpers ───────────────────── */
@@ -174,6 +176,7 @@ export function OrderInvoice({
   internalNotes,
   tracking,
   storeName = COMPANY.name,
+  logoUrl,
 }: OrderInvoiceProps) {
   const bill = billingAddress ?? shippingAddress;
   const ship = shippingAddress;
@@ -189,12 +192,22 @@ export function OrderInvoice({
     >
       {/* Letterhead */}
       <header className="flex flex-wrap items-start justify-between gap-2 border-b border-ink pb-2">
-        <div>
-          <div className="text-2xl font-semibold tracking-tight">
-            {storeName}
-          </div>
-          <div className="text-xs text-neutral-600">
-            {TONE_SUBTITLES[tone]}
+        <div className="flex items-center gap-2">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={storeName}
+              className="h-10 w-auto max-w-[160px] object-contain"
+            />
+          ) : null}
+          <div>
+            <div className="text-2xl font-semibold tracking-tight">
+              {storeName}
+            </div>
+            <div className="text-xs text-neutral-600">
+              {TONE_SUBTITLES[tone]}
+            </div>
           </div>
         </div>
         <div className="text-right">

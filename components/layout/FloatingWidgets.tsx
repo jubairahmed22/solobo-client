@@ -11,21 +11,25 @@ import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
 import { formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { COMPANY } from "@/lib/entity/company";
+import { ChatWidget } from "./ChatWidget";
 
 /**
- * Storefront floating widgets - the persistent right-edge cart bubble and
- * the bottom-right WhatsApp shortcut. Mounted globally from the root
- * layout so every page gets them with zero per-page wiring.
+ * Storefront floating widgets - the persistent right-edge cart bubble, the
+ * AI shopping-assistant chat bubble, and the bottom-right WhatsApp shortcut.
+ * Mounted globally from the root layout so every page gets them with zero
+ * per-page wiring.
  *
  * The cart bubble shows live item count + subtotal and opens a right-side
  * Drawer with a mini-cart (image, name, price, qty stepper, remove,
- * "PROCEED" CTA). The WhatsApp button deep-links to wa.me with whatever
- * number the admin configured in Site Settings → Contact.
+ * "PROCEED" CTA). The chat bubble (`ChatWidget`) opens the same Drawer
+ * pattern with a conversation that can search the catalog, answer store
+ * questions, and place COD orders. The WhatsApp button deep-links to wa.me
+ * with whatever number the admin configured in Site Settings → Contact.
  *
- * Both are auto-suppressed on /admin/*, /login, /register, /checkout and
- * any auth route - surfaces where a floating cart would compete with the
- * primary action or where contacting support over WhatsApp doesn't make
- * sense (e.g. an admin already inside the dashboard).
+ * All three are auto-suppressed on /admin/*, /login, /register, /checkout
+ * and any auth route - surfaces where they'd compete with the primary
+ * action or where contacting support doesn't make sense (e.g. an admin
+ * already inside the dashboard).
  */
 export function FloatingWidgets() {
   const pathname = usePathname() ?? "/";
@@ -47,6 +51,7 @@ export function FloatingWidgets() {
   return (
     <>
       <CartBubble />
+      <ChatWidget />
       <WhatsAppBubble />
     </>
   );

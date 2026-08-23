@@ -12,7 +12,8 @@ import {
   Save,
   Send,
 } from "lucide-react";
-import { Button, Input, Label, Spinner } from "@/components/ui";
+import { Button, Input, Label } from "@/components/ui";
+import { AdminFormSkeleton } from "@/components/admin/Skeleton";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
 import { useUIStore } from "@/store/uiStore";
 import {
@@ -97,7 +98,7 @@ function IntegrationCard({
   active,
 }: IntegrationCardProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+    <div className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-neutral-100 bg-neutral-50 text-lg">
@@ -105,9 +106,9 @@ function IntegrationCard({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-ink">{title}</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">{title}</h2>
               {active ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                <span className="inline-flex items-center gap-1 rounded-[4px] bg-green-100 px-[10px] py-[2px] text-[12px] font-medium text-green-800">
                   <CheckCircle2 className="h-3 w-3" aria-hidden /> Active
                 </span>
               ) : null}
@@ -145,7 +146,7 @@ function Field({
 }) {
   return (
     <Label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+      <span className="text-[14px] font-medium text-gray-900">{label}</span>
       {children}
       {error ? (
         <span className="text-xs text-red-600">{error}</span>
@@ -171,14 +172,14 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
-        checked ? "bg-accent" : "bg-neutral-200"
+      className={`relative inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A56DB]/50 ${
+        checked ? "bg-[#1A56DB]" : "bg-gray-200"
       }`}
     >
       <span className="sr-only">{label}</span>
       <span
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform ${
-          checked ? "translate-x-4" : "translate-x-0"
+        className={`pointer-events-none inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow ring-0 transition-transform duration-150 ${
+          checked ? "translate-x-[20px]" : "translate-x-0"
         }`}
       />
     </button>
@@ -264,29 +265,33 @@ function WhatsAppSection() {
   const submitting = update.isPending;
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-ink">WhatsApp Notifications</h2>
+          <h2 className="text-[20px] font-bold text-gray-900">WhatsApp Notifications</h2>
           <p className="mt-1 text-sm text-neutral-500">
             Send automated order updates to customers via WhatsApp. Choose a provider,
             enter your credentials, and select which status changes trigger a message.
           </p>
         </div>
-        <Button type="submit" size="sm" disabled={!isDirty || submitting}>
+        <button
+          type="submit"
+          disabled={!isDirty || submitting}
+          className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+        >
           {submitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
           ) : (
-            <Save className="h-4 w-4" aria-hidden />
+            <Save className="h-[16px] w-[16px]" aria-hidden />
           )}
-          <span className="ml-1.5">Save</span>
-        </Button>
+          Save changes
+        </button>
       </header>
 
-      <div className="flex flex-col gap-5 rounded-sm border border-neutral-200 bg-paper p-3">
+      <div className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
 
         {/* Enable toggle */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-[16px]">
           <div>
             <p className="text-sm font-medium text-ink">Enable WhatsApp notifications</p>
             <p className="text-xs text-neutral-500 mt-0.5">
@@ -316,7 +321,7 @@ function WhatsAppSection() {
           <div className="relative">
             <select
               {...register("provider")}
-              className="h-9 w-full appearance-none rounded-sm border border-neutral-200 bg-paper px-2.5 pr-8 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent/40 cursor-pointer"
+              className="h-[40px] w-full cursor-pointer appearance-none rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] pr-8 text-[14px] text-gray-900 focus:border-[#1A56DB] focus:bg-white focus:outline-none"
             >
               <option value="">None (notifications disabled)</option>
               <option value="twilio">Twilio (global, enterprise-grade)</option>
@@ -449,7 +454,7 @@ function WhatsAppSection() {
 
             {/* Triggers */}
             <div>
-              <p className="mb-3 text-xs font-medium text-neutral-500 uppercase tracking-wide">
+              <p className="mb-3 text-[14px] font-medium text-gray-900 uppercase tracking-wide">
                 Send message when order status changes to
               </p>
               <div className="flex flex-wrap gap-5">
@@ -457,16 +462,16 @@ function WhatsAppSection() {
                   <input
                     type="checkbox"
                     {...register("notifyOnConfirmed")}
-                    className="h-4 w-4 rounded border-neutral-300 accent-accent"
+                    className="h-[16px] w-[16px] rounded border-gray-300 accent-[#1A56DB]"
                   />
                   <span>Confirmed</span>
-                  <span className="rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-medium text-green-700">recommended</span>
+                  <span className="rounded-[4px] bg-green-100 px-[8px] py-[2px] text-[11px] font-medium text-green-800">recommended</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-ink select-none">
                   <input
                     type="checkbox"
                     {...register("notifyOnShipped")}
-                    className="h-4 w-4 rounded border-neutral-300 accent-accent"
+                    className="h-[16px] w-[16px] rounded border-gray-300 accent-[#1A56DB]"
                   />
                   Shipped
                 </label>
@@ -474,7 +479,7 @@ function WhatsAppSection() {
                   <input
                     type="checkbox"
                     {...register("notifyOnDelivered")}
-                    className="h-4 w-4 rounded border-neutral-300 accent-accent"
+                    className="h-[16px] w-[16px] rounded border-gray-300 accent-[#1A56DB]"
                   />
                   Delivered
                 </label>
@@ -485,7 +490,7 @@ function WhatsAppSection() {
 
             {/* Test send */}
             <div>
-              <p className="mb-1 text-xs font-medium text-neutral-500 uppercase tracking-wide">
+              <p className="mb-1 text-[14px] font-medium text-gray-900 uppercase tracking-wide">
                 Test send
               </p>
               <p className="mb-3 text-xs text-neutral-400">
@@ -535,7 +540,7 @@ function WhatsAppSection() {
             </div>
           </>
         ) : (
-          <div className="rounded-sm border border-dashed border-neutral-200 bg-neutral-50 px-4 py-5 text-center text-xs text-neutral-400">
+          <div className="rounded-[8px] border border-dashed border-gray-300 bg-white px-[16px] py-[20px] text-center text-[13px] text-gray-400">
             Select a provider above to configure credentials and test the integration.
           </div>
         )}
@@ -607,16 +612,12 @@ export function IntegrationsClient() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper">
-        <Spinner />
-      </div>
-    );
+    return <AdminFormSkeleton sections={3} sidebarCards={1} />;
   }
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
+      <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
         <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
         <p className="text-sm text-neutral-500">
           {error instanceof AdminError ? error.message : "Could not load settings."}
@@ -634,28 +635,32 @@ export function IntegrationsClient() {
     <div className="flex flex-col gap-10">
 
       {/* "" Analytics & tracking integrations "" */}
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
 
         {/* Header */}
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-ink">Integrations</h1>
+            <h1 className="text-[24px] font-bold leading-tight text-gray-900">Integrations</h1>
             <p className="mt-1 text-sm text-neutral-500">
               Connect analytics, advertising, and tracking platforms. Keys are stored
               securely and injected into every storefront page automatically.
             </p>
           </div>
-          <Button type="submit" size="sm" disabled={!isDirty || submitting}>
+          <button
+            type="submit"
+            disabled={!isDirty || submitting}
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+          >
             {submitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
             ) : (
-              <Save className="h-4 w-4" aria-hidden />
+              <Save className="h-[16px] w-[16px]" aria-hidden />
             )}
-            <span className="ml-1.5">Save</span>
-          </Button>
+            Save changes
+          </button>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2">
 
           {/* Google Tag Manager */}
           <IntegrationCard

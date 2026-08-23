@@ -31,7 +31,7 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
   const isAdmin = role === "admin" || role === "superadmin";
   if (!isAdmin) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-neutral-50 p-4 text-center">
+      <div className="flex h-screen flex-col items-center justify-center gap-[16px] bg-neutral-50 p-4 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-neutral-200 bg-paper shadow-sm">
           <ShieldOff className="h-6 w-6 text-neutral-400" aria-hidden />
         </div>

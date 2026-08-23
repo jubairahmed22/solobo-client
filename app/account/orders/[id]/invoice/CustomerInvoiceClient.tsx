@@ -10,6 +10,7 @@ import {
   type InvoiceTotals,
 } from "@/components/composed";
 import { useOrder } from "@/hooks/useCommerce";
+import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
 
 /**
  * Customer-side invoice. Reads via /api/orders/:id (auth-gated to the
@@ -20,6 +21,8 @@ import { useOrder } from "@/hooks/useCommerce";
  */
 export function CustomerInvoiceClient({ orderId }: { orderId: string }) {
   const { data: order, isLoading, isError } = useOrder(orderId);
+  const { data: settings } = usePublicSiteSettings();
+  const logoUrl = settings?.invoiceLogo || settings?.companyLogo || undefined;
 
   // Trigger the browser's print dialog. We call this on the explicit button
   // press instead of `useEffect` autoprint - autoprint surprises users who
@@ -91,6 +94,7 @@ export function CustomerInvoiceClient({ orderId }: { orderId: string }) {
 
       <OrderInvoice
         tone="customer"
+        logoUrl={logoUrl}
         orderNumber={order.orderNumber}
         placedAt={order.createdAt}
         deliveredAt={order.tracking?.deliveredAt}

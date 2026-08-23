@@ -30,6 +30,7 @@ import type {
 } from "@/types/admin";
 import type { OrderStatus, PaymentStatus } from "@/types/commerce";
 import type { AdminListQuestionsParams } from "@/types/questions";
+import type { AdminListChatSessionsParams } from "@/types/chat";
 
 export const adminKeys = {
   stats: ["admin", "stats"] as const,
@@ -46,6 +47,7 @@ export const adminKeys = {
   products: (params: AdminListProductsParams) => ["admin", "products", params] as const,
   productsAll: ["admin", "products"] as const,
   product: (id: string) => ["admin", "product", id] as const,
+  productInventoryStats: ["admin", "products", "inventory-stats"] as const,
   users: (params: AdminListUsersParams) => ["admin", "users", params] as const,
   usersAll: ["admin", "users"] as const,
   user: (id: string) => ["admin", "user", id] as const,
@@ -64,6 +66,9 @@ export const adminKeys = {
   questionsAll: ["admin", "questions"] as const,
   siteSettings: ["admin", "site-settings"] as const,
   customizations: ["admin", "customizations"] as const,
+  chatSessions: (params: AdminListChatSessionsParams) =>
+    ["admin", "chat-sessions", params] as const,
+  chatSession: (id: string) => ["admin", "chat-session", id] as const,
 };
 
 export function useAdminStats() {
@@ -85,6 +90,27 @@ export function useAdminTimeseries(days: number, sellerId?: string) {
     queryKey: adminKeys.timeseries(days, sellerId),
     queryFn: () => adminApi.getTimeseries(days, sellerId),
     staleTime: 30_000,
+  });
+}
+
+export function useAdminChatSessions(params: AdminListChatSessionsParams) {
+  return useQuery({
+    queryKey: adminKeys.chatSessions(params),
+    queryFn: () => adminApi.listChatSessions(params),
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+}
+
+export function useAdminChatSession(id: string | undefined) {
+  return useQuery({
+    queryKey: id ? adminKeys.chatSession(id) : ["admin", "chat-session", "noop"],
+    queryFn: () => {
+      if (!id) throw new Error("Session id is required");
+      return adminApi.getChatSession(id);
+    },
+    enabled: Boolean(id),
+    staleTime: 10_000,
   });
 }
 
@@ -229,6 +255,82 @@ export function useUpdateOrderTracking(id: string) {
   });
 }
 
+/** Manually set / remove the delivery charge on an order (0 = free). */
+export function useUpdateOrderShipping(id: string) {
+  const invalidate = useInvalidateOrder(id);
+  return useMutation({
+    mutationFn: (shippingCost: number) =>
+      adminApi.updateOrderShipping(id, shippingCost),
+    onSuccess: invalidate,
+  });
+}
+
+/* ───────────────────── Pathao courier ─────────────────────
+ * City/zone/area are 24h-cached server-side, so a long client staleTime
+ * just avoids a redundant round-trip within the same admin session - the
+ * underlying data barely changes.
+ */
+const COURIER_LOCATION_STALE_TIME = 24 * 60 * 60 * 1000;
+
+export function useCourierCities() {
+  return useQuery({
+    queryKey: ["admin", "delivery", "cities"],
+    queryFn: adminApi.getCourierCities,
+    staleTime: COURIER_LOCATION_STALE_TIME,
+  });
+}
+
+/** Best-effort city match from a shipping address's free-text district/city - admin convenience only, see lib/api/admin.ts. */
+export function useMatchCourierLocation(params: { district?: string; city?: string }, enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin", "delivery", "match", params],
+    queryFn: () => adminApi.matchCourierLocation(params),
+    enabled: enabled && Boolean(params.district || params.city),
+    staleTime: COURIER_LOCATION_STALE_TIME,
+  });
+}
+
+export function useCourierZones(cityId: number | undefined) {
+  return useQuery({
+    queryKey: ["admin", "delivery", "zones", cityId],
+    queryFn: () => adminApi.getCourierZones(cityId!),
+    enabled: cityId !== undefined,
+    staleTime: COURIER_LOCATION_STALE_TIME,
+  });
+}
+
+export function useCourierAreas(zoneId: number | undefined) {
+  return useQuery({
+    queryKey: ["admin", "delivery", "areas", zoneId],
+    queryFn: () => adminApi.getCourierAreas(zoneId!),
+    enabled: zoneId !== undefined,
+    staleTime: COURIER_LOCATION_STALE_TIME,
+  });
+}
+
+/**
+ * Dispatch/refresh both mutate the order's `courier` field even when they
+ * fail (e.g. a "missing city/zone" skip is itself persisted as a
+ * dispatchError) - so we invalidate `onSettled`, not just `onSuccess`, or
+ * the detail page would keep showing stale courier state after a failed
+ * attempt.
+ */
+export function useDispatchCourierOrder(id: string) {
+  const invalidate = useInvalidateOrder(id);
+  return useMutation({
+    mutationFn: () => adminApi.dispatchCourierOrder(id),
+    onSettled: invalidate,
+  });
+}
+
+export function useRefreshCourierOrder(id: string) {
+  const invalidate = useInvalidateOrder(id);
+  return useMutation({
+    mutationFn: () => adminApi.refreshCourierOrder(id),
+    onSettled: invalidate,
+  });
+}
+
 /* ─── Admin order line-item mutations + customer edit + POS create ───
  *
  * Each mutation reuses {@link useInvalidateOrder} so the open detail page,
@@ -305,6 +407,9 @@ export function useCreatePosOrder() {
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product"] });
       qc.invalidateQueries({ queryKey: adminKeys.productsAll });
+      // A POS sale decrements stock, which moves the products page's
+      // Current Stock / Inventory Value KPIs.
+      qc.invalidateQueries({ queryKey: adminKeys.productInventoryStats });
       // Pre-seed the detail key so the invoice page renders immediately
       // without a second round-trip.
       qc.setQueryData(adminKeys.order(created._id), created);
@@ -319,6 +424,15 @@ export function useAdminProducts(params: AdminListProductsParams) {
     queryKey: adminKeys.products(params),
     queryFn: () => adminApi.listProducts(params),
     placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  });
+}
+
+/** The products page's 4-card KPI strip. Short staleTime - it's a live aggregate, not a report. */
+export function useAdminInventoryStats() {
+  return useQuery({
+    queryKey: adminKeys.productInventoryStats,
+    queryFn: adminApi.getInventoryStats,
     staleTime: 15_000,
   });
 }
@@ -351,6 +465,7 @@ function useInvalidateProduct(id: string) {
   return () => {
     qc.invalidateQueries({ queryKey: adminKeys.product(id) });
     qc.invalidateQueries({ queryKey: adminKeys.productsAll });
+    qc.invalidateQueries({ queryKey: adminKeys.productInventoryStats });
     qc.invalidateQueries({ queryKey: adminKeys.stats });
     qc.invalidateQueries({ queryKey: ["products"] });
     qc.invalidateQueries({ queryKey: ["product"] });
@@ -371,6 +486,7 @@ export function useCreateAdminProduct() {
     onSuccess: (created) => {
       qc.setQueryData(adminKeys.product(created._id), created);
       qc.invalidateQueries({ queryKey: adminKeys.productsAll });
+      qc.invalidateQueries({ queryKey: adminKeys.productInventoryStats });
       qc.invalidateQueries({ queryKey: adminKeys.stats });
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product"] });
@@ -395,6 +511,7 @@ export function useDeleteAdminProduct() {
       // and the lists need to drop the row.
       qc.invalidateQueries({ queryKey: adminKeys.productsAll });
       qc.invalidateQueries({ queryKey: ["admin", "product"] });
+      qc.invalidateQueries({ queryKey: adminKeys.productInventoryStats });
       qc.invalidateQueries({ queryKey: adminKeys.stats });
       qc.invalidateQueries({ queryKey: ["products"] });
       qc.invalidateQueries({ queryKey: ["product"] });

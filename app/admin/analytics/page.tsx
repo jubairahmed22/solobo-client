@@ -31,7 +31,7 @@ export default function AnalyticsOverviewPage() {
     data?.timeseries.map((p) => ({ date: p.date, value: p.revenue })) ?? [];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       <ReportHeader
         title="Analytics overview"
         description="Traffic, engagement, and the top-line conversion funnel."
@@ -58,13 +58,13 @@ export default function AnalyticsOverviewPage() {
               />
             </StatGrid>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2">
               <Panel title="Sessions trend">
                 <TrendChart points={sessionsTrend} />
               </Panel>
               <Panel title="Revenue trend">
                 <TrendChart points={revenueTrend} />
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-gray-500">
                   Behavioural purchase value - see Financial for recognised revenue.
                 </p>
               </Panel>
@@ -74,7 +74,7 @@ export default function AnalyticsOverviewPage() {
               <FunnelChart steps={data.funnel} />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2">
               <Panel title="Top pages">
                 <BarList
                   rows={data.topPages.map((p) => ({
@@ -98,7 +98,7 @@ export default function AnalyticsOverviewPage() {
             </div>
 
             <Panel>
-              <p className="text-xs text-neutral-400">
+              <p className="text-xs text-gray-400">
                 Showing {formatMoney(data.totals.revenue)} behavioural revenue across{" "}
                 {formatNum(data.totals.events)} events.
               </p>

@@ -13,17 +13,31 @@ export interface Address {
   altPhone?: string;
   line1: string;
   line2?: string;
-  city: string;
+  /** Optional - district alone locates the delivery area in BD. */
+  city?: string;
   district: string;
   division?: string;
   postalCode?: string;
   country?: string;
   isDefault?: boolean;
+  /** Pathao courier location ids - required before an order can be dispatched. */
+  pathaoCityId?: number;
+  pathaoCityName?: string;
+  pathaoZoneId?: number;
+  pathaoZoneName?: string;
+  pathaoAreaId?: number;
+  pathaoAreaName?: string;
 }
 
 export type AddressInput = Omit<Address, "_id">;
 
 /* ───────────── Cart ───────────── */
+
+/** One customization charge included in a line's unit price. */
+export interface LineAddOn {
+  label: string;
+  amount: number;
+}
 
 export interface ServerCartItem {
   _id: string;
@@ -36,6 +50,10 @@ export interface ServerCartItem {
   options?: Record<string, string>;
   price: number;
   originalPrice?: number;
+  /** Unit price before customization add-ons (only on customized lines). */
+  basePrice?: number;
+  /** Per-unit customization charges included in `price`. */
+  addOns?: LineAddOn[];
   currency: string;
   qty: number;
   stock?: number;
@@ -159,6 +177,12 @@ export interface OrderItem {
   options?: Record<string, string>;
   price: number;
   originalPrice?: number;
+  /** Unit price before customization add-ons (only on customized lines). */
+  basePrice?: number;
+  /** Per-unit customization charges included in `price`. */
+  addOns?: LineAddOn[];
+  /** Manual per-line discount (POS), already netted into `price`. */
+  manualDiscount?: { type: "percentage" | "fixed"; value: number; amount: number };
   qty: number;
   lineTotal: number;
   seller?: string;
@@ -186,6 +210,32 @@ export interface OrderTimelineEvent {
   note?: string;
   by?: string;
   at: string;
+}
+
+export interface CourierHistoryEntry {
+  event: string;
+  status?: string;
+  raw?: unknown;
+  at: string;
+}
+
+/** Pathao dispatch state, present once an order has an auto/manual dispatch attempt. */
+export interface CourierInfo {
+  provider: "pathao";
+  consignmentId?: string;
+  merchantOrderId?: string;
+  storeId?: number;
+  deliveryFee?: number;
+  codAmount?: number;
+  collectedAmount?: number;
+  orderStatus?: string;
+  orderStatusSlug?: string;
+  dispatchedAt?: string;
+  lastSyncedAt?: string;
+  merchantPaidAt?: string;
+  /** Set when the last dispatch/re-dispatch attempt failed (e.g. missing city/zone). */
+  dispatchError?: string;
+  history?: CourierHistoryEntry[];
 }
 
 /* ───────────── Returns / RMA ───────────── */
@@ -243,6 +293,8 @@ export interface Order {
   user?: string;
   /** True when the order was placed without an account. */
   isGuest?: boolean;
+  /** Where the order was taken: storefront checkout ("web") or in-person POS. */
+  channel?: "web" | "pos";
   email?: string;
   items: OrderItem[];
   shippingAddress: Address;
@@ -254,10 +306,13 @@ export interface Order {
   total: number;
   currency: string;
   couponCode?: string;
+  /** Manual order-wide discount (POS), part of `discount` above. */
+  orderDiscount?: { type: "percentage" | "fixed"; value: number; amount: number };
   status: OrderStatus;
   timeline: OrderTimelineEvent[];
   payment: OrderPayment;
   tracking?: OrderTracking;
+  courier?: CourierInfo;
   customerNote?: string;
   internalNotes?: string;
   cancelledAt?: string;

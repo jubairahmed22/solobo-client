@@ -37,6 +37,16 @@ export interface VariantsEditorProps {
   currency?: string;
   max?: number;
   className?: string;
+  /**
+   * The product's current base price (live - pass the watched form value,
+   * not just the saved value). Blank variant price/compare-at fields show
+   * this as a placeholder so the admin sees the real number that will be
+   * charged instead of an empty box, and it updates as the base price is
+   * edited. Purely visual - a placeholder never becomes the field's value,
+   * so nothing is written until the admin actually types into that row, and
+   * a variant that already has its own price is never touched.
+   */
+  basePrice?: number;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -245,6 +255,7 @@ export function VariantsEditor({
   currency = "BDT",
   max = 100,
   className,
+  basePrice,
 }: VariantsEditorProps) {
   /* ── Option CRUD ── */
 
@@ -436,9 +447,11 @@ export function VariantsEditor({
                           step="0.01"
                           value={row.price}
                           onChange={(e) => patchVariant(i, { price: e.target.value })}
-                          placeholder="Base"
-                          aria-label="Variant price"
-                          className="tabular-nums"
+                          placeholder={
+                            basePrice !== undefined && basePrice > 0 ? String(basePrice) : "Base"
+                          }
+                          aria-label="Variant price - blank inherits the base product price"
+                          className="tabular-nums placeholder:text-neutral-400"
                         />
                         {onSale && (
                           <span
@@ -497,7 +510,9 @@ export function VariantsEditor({
               </ul>
 
               <p className="text-[11px] text-neutral-400">
-                Leave <strong>Price</strong> blank to inherit the base product price. Set{" "}
+                Leave <strong>Price</strong> blank to inherit the base product price (shown as a
+                placeholder, updates as you edit the base price above). Type a number to give that
+                variant its own price - it stays fixed even if the base price changes later. Set{" "}
                 <strong>Was</strong> above Price to show a strikethrough sale price per variant.
               </p>
             </>

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Ban, CheckCircle2, Clock,
-  CreditCard, Loader2, Printer, Trash2, Truck, Undo2, XCircle,
+  CreditCard, Loader2, Printer, Tag, Trash2, Truck, Undo2, XCircle,
 } from "lucide-react";
-import { Badge, Button, Input, Spinner } from "@/components/ui";
+import { Badge, Button, Input } from "@/components/ui";
+import { AdminDetailSkeleton } from "@/components/admin/Skeleton";
 import { Select } from "@/components/composed";
 import { cn } from "@/lib/utils/cn";
 import { useUIStore } from "@/store/uiStore";
@@ -18,6 +19,7 @@ import {
 import { AdminError } from "@/lib/api/admin";
 import { OrderItemsEditor } from "./OrderItemsEditor";
 import { OrderCustomerEditor } from "./OrderCustomerEditor";
+import { OrderCourierPanel } from "./OrderCourierPanel";
 import type { AdminOrderDetail } from "@/types/admin";
 import type { OrderStatus, OrderTimelineEvent, PaymentStatus } from "@/types/commerce";
 
@@ -38,14 +40,15 @@ const PAYMENT_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: "refunded", label: "Refunded" },
 ];
 
+/* Flowbite badge tones - bg-*-100 text-*-800. */
 const STATUS_TONES: Record<string, string> = {
-  pending:   "bg-neutral-100 text-neutral-700",
-  confirmed: "bg-blue-50 text-blue-700",
-  packed:    "bg-violet-50 text-violet-700",
-  shipped:   "bg-amber-50 text-amber-700",
-  delivered: "bg-emerald-50 text-emerald-700",
-  cancelled: "bg-red-50 text-red-500",
-  returned:  "bg-neutral-100 text-neutral-500",
+  pending:   "bg-gray-100 text-gray-800",
+  confirmed: "bg-blue-100 text-blue-800",
+  packed:    "bg-purple-100 text-purple-800",
+  shipped:   "bg-yellow-100 text-yellow-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  returned:  "bg-gray-100 text-gray-800",
 };
 
 function formatMoney(amount: number, currency: string): string {
@@ -61,44 +64,62 @@ function formatDate(iso: string): string {
 
 function StatusPill({ status }: { status: OrderStatus }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize", STATUS_TONES[status] ?? "bg-neutral-100 text-neutral-700")}>
+    <span className={cn("inline-flex items-center rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium capitalize", STATUS_TONES[status] ?? "bg-gray-100 text-gray-800")}>
       {status}
     </span>
   );
 }
+
+/* Shared card shell - white, shadow-sm, gray-200 border, 16px padding. */
+function Card({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <section className={cn("rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm", className)}>
+      {children}
+    </section>
+  );
+}
+
+function CardTitle({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-[16px] flex items-center gap-[8px] text-[16px] font-semibold text-gray-900">
+      {icon}
+      {children}
+    </h2>
+  );
+}
+
+const fieldLabel = "text-[13px] font-medium text-gray-500";
 
 /* "" Timeline "" */
 
 function TimelineCard({ events }: { events: OrderTimelineEvent[] }) {
   if (!events?.length) {
     return (
-      <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-        <h2 className="text-sm font-semibold text-ink">Timeline</h2>
-        <p className="mt-1 text-sm text-neutral-500">No events yet.</p>
-      </section>
+      <Card>
+        <CardTitle icon={<Clock className="h-[16px] w-[16px] text-gray-400" aria-hidden />}>Timeline</CardTitle>
+        <p className="text-[14px] text-gray-500">No events yet.</p>
+      </Card>
     );
   }
   const ordered = [...events].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
   return (
-    <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-      <h2 className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-ink">
-        <Clock className="h-4 w-4 text-neutral-400" aria-hidden /> Timeline
-      </h2>
-      <ol className="flex flex-col gap-3">
+    <Card>
+      <CardTitle icon={<Clock className="h-[16px] w-[16px] text-gray-400" aria-hidden />}>Timeline</CardTitle>
+      <ol className="flex flex-col gap-[12px]">
         {ordered.map((ev, idx) => (
-          <li key={`${ev.status}-${ev.at}-${idx}`} className="flex items-start gap-3 border-l-2 border-neutral-200 pl-4 first:border-accent/40">
-            <div className="flex flex-1 flex-col gap-0.5">
-              <div className="flex flex-wrap items-center gap-2">
+          <li key={`${ev.status}-${ev.at}-${idx}`} className="flex items-start gap-[12px] border-l-2 border-gray-200 pl-[16px] first:border-[#1A56DB]/40">
+            <div className="flex flex-1 flex-col gap-[2px]">
+              <div className="flex flex-wrap items-center gap-[8px]">
                 <StatusPill status={ev.status} />
-                <span className="text-xs text-neutral-500">{formatDate(ev.at)}</span>
+                <span className="text-[12px] text-gray-500">{formatDate(ev.at)}</span>
               </div>
-              {ev.note ? <p className="text-sm text-neutral-700">{ev.note}</p> : null}
-              {ev.by ? <span className="text-xs text-neutral-400">by {ev.by}</span> : null}
+              {ev.note ? <p className="text-[14px] text-gray-700">{ev.note}</p> : null}
+              {ev.by ? <span className="text-[12px] text-gray-400">by {ev.by}</span> : null}
             </div>
           </li>
         ))}
       </ol>
-    </section>
+    </Card>
   );
 }
 
@@ -127,22 +148,22 @@ function DangerZone({ order }: { order: AdminOrderDetail }) {
   };
 
   return (
-    <section className="rounded-sm border border-red-200 bg-red-50/40 p-3">
-      <h2 className="text-sm font-semibold text-red-700">Danger zone</h2>
-      <p className="mt-1 text-xs text-red-600/90">
+    <section className="rounded-[8px] border border-red-200 bg-red-50 p-[16px]">
+      <h2 className="text-[16px] font-semibold text-red-700">Danger zone</h2>
+      <p className="mt-[4px] text-[13px] text-red-600">
         Deleting removes this order permanently.
         {stockRestores ? " Reserved stock is added back to inventory." : ""}
       </p>
-      <Button
-        size="sm"
-        variant="ghost"
+      {/* Flowbite destructive-outline button */}
+      <button
+        type="button"
         onClick={onDelete}
         disabled={del.isPending}
-        className="mt-2 text-red-700 hover:bg-red-100"
+        className="mt-[12px] inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[12px] text-[13px] font-medium text-red-600 transition duration-75 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {del.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" aria-hidden />}
-        <span className="ml-1">Delete order</span>
-      </Button>
+        {del.isPending ? <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden /> : <Trash2 className="h-[14px] w-[14px]" aria-hidden />}
+        Delete order
+      </button>
     </section>
   );
 }
@@ -180,49 +201,62 @@ function StatusActions({ order }: { order: AdminOrderDetail }) {
 
   if (advanceTargets.length === 0 && !canCancel) {
     return (
-      <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-        <h2 className="text-sm font-semibold text-ink">Status</h2>
-        <p className="mt-1 text-sm text-neutral-500">This order is in a terminal state — no further transitions are available.</p>
-      </section>
+      <Card>
+        <CardTitle>Status</CardTitle>
+        <p className="text-[14px] text-gray-500">This order is in a terminal state — no further transitions are available.</p>
+      </Card>
     );
   }
 
   const busy = updateStatus.isPending || cancel.isPending;
 
   return (
-    <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-      <h2 className="mb-4 text-sm font-semibold text-ink">Status</h2>
+    <Card>
+      <CardTitle>Status</CardTitle>
 
       {advanceTargets.length > 0 ? (
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Note (optional)</span>
+        <div className="flex flex-col gap-[12px]">
+          <label className="flex flex-col gap-[6px]">
+            <span className={fieldLabel}>Note (optional)</span>
             <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Visible in the timeline" />
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-[8px]">
             {advanceTargets.map((target) => (
-              <Button key={target} size="sm" onClick={() => onAdvance(target)} disabled={busy}>
-                {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <ArrowRight className="h-4 w-4" aria-hidden />}
-                <span className="ml-1 capitalize">Mark {target}</span>
-              </Button>
+              /* Flowbite primary button */
+              <button
+                key={target}
+                type="button"
+                onClick={() => onAdvance(target)}
+                disabled={busy}
+                className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[14px] text-[13px] font-medium capitalize text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {updateStatus.isPending ? <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden /> : <ArrowRight className="h-[14px] w-[14px]" aria-hidden />}
+                Mark {target}
+              </button>
             ))}
           </div>
         </div>
       ) : null}
 
       {canCancel ? (
-        <div className="mt-4 border-t border-neutral-100 pt-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Cancel reason (optional)</span>
+        <div className="mt-[16px] border-t border-gray-100 pt-[16px]">
+          <label className="flex flex-col gap-[6px]">
+            <span className={fieldLabel}>Cancel reason (optional)</span>
             <Input value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Why is this being cancelled?" />
           </label>
-          <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy} className="mt-2">
-            {cancel.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Ban className="h-4 w-4" aria-hidden />}
-            <span className="ml-1">Cancel order</span>
-          </Button>
+          {/* Flowbite destructive-outline button */}
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="mt-[8px] inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[14px] text-[13px] font-medium text-red-600 transition duration-75 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {cancel.isPending ? <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden /> : <Ban className="h-[14px] w-[14px]" aria-hidden />}
+            Cancel order
+          </button>
         </div>
       ) : null}
-    </section>
+    </Card>
   );
 }
 
@@ -260,52 +294,56 @@ function PaymentActions({ order }: { order: AdminOrderDetail }) {
   };
 
   return (
-    <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-      <h2 className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-ink">
-        <CreditCard className="h-4 w-4 text-neutral-400" aria-hidden /> Payment
-      </h2>
-      <div className="mb-4 divide-y divide-neutral-50 rounded-sm border border-neutral-100 text-sm text-neutral-600">
-        <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-neutral-500">Method</span>
-          <span className="font-medium uppercase text-ink">{order.payment.method}</span>
+    <Card>
+      <CardTitle icon={<CreditCard className="h-[16px] w-[16px] text-gray-400" aria-hidden />}>Payment</CardTitle>
+      <div className="mb-[16px] divide-y divide-gray-100 rounded-[8px] border border-gray-100 text-[14px] text-gray-600">
+        <div className="flex items-center justify-between px-[12px] py-[8px]">
+          <span className="text-gray-500">Method</span>
+          <span className="font-medium uppercase text-gray-900">{order.payment.method}</span>
         </div>
         {order.payment.paidAt ? (
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-neutral-500">Paid at</span><span className="font-medium text-ink">{formatDate(order.payment.paidAt)}</span>
+          <div className="flex items-center justify-between px-[12px] py-[8px]">
+            <span className="text-gray-500">Paid at</span><span className="font-medium text-gray-900">{formatDate(order.payment.paidAt)}</span>
           </div>
         ) : null}
         {order.payment.refundedAt ? (
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-neutral-500">Refunded at</span><span className="font-medium text-ink">{formatDate(order.payment.refundedAt)}</span>
+          <div className="flex items-center justify-between px-[12px] py-[8px]">
+            <span className="text-gray-500">Refunded at</span><span className="font-medium text-gray-900">{formatDate(order.payment.refundedAt)}</span>
           </div>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-neutral-500">Status</span>
+      <div className="flex flex-col gap-[12px]">
+        <label className="flex flex-col gap-[6px]">
+          <span className={fieldLabel}>Status</span>
           <Select value={status} onChange={(e) => setStatus(e.target.value as PaymentStatus)} options={PAYMENT_OPTIONS} />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-neutral-500">Transaction ID</span>
+        <label className="flex flex-col gap-[6px]">
+          <span className={fieldLabel}>Transaction ID</span>
           <Input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} placeholder="Gateway reference (optional)" />
         </label>
         {status === "refunded" ? (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-neutral-500">Refund amount ({order.currency})</span>
+          <label className="flex flex-col gap-[6px]">
+            <span className={fieldLabel}>Refund amount ({order.currency})</span>
             <Input type="number" min={0} step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder={String(order.total)} />
           </label>
         ) : null}
-        <Button size="sm" onClick={onSave} disabled={!dirty || update.isPending}>
-          {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> :
-           status === "paid" ? <CheckCircle2 className="h-4 w-4" aria-hidden /> :
-           status === "refunded" ? <Undo2 className="h-4 w-4" aria-hidden /> :
-           status === "failed" ? <XCircle className="h-4 w-4" aria-hidden /> :
-           <Clock className="h-4 w-4" aria-hidden />}
-          <span className="ml-1">Save payment</span>
-        </Button>
+        {/* Flowbite primary button */}
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!dirty || update.isPending}
+          className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[14px] text-[13px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {update.isPending ? <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden /> :
+           status === "paid" ? <CheckCircle2 className="h-[14px] w-[14px]" aria-hidden /> :
+           status === "refunded" ? <Undo2 className="h-[14px] w-[14px]" aria-hidden /> :
+           status === "failed" ? <XCircle className="h-[14px] w-[14px]" aria-hidden /> :
+           <Clock className="h-[14px] w-[14px]" aria-hidden />}
+          Save payment
+        </button>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -337,35 +375,39 @@ function TrackingActions({ order }: { order: AdminOrderDetail }) {
   };
 
   return (
-    <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-      <h2 className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-ink">
-        <Truck className="h-4 w-4 text-neutral-400" aria-hidden /> Shipping
-      </h2>
-      <div className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-neutral-500">Carrier</span>
+    <Card>
+      <CardTitle icon={<Truck className="h-[16px] w-[16px] text-gray-400" aria-hidden />}>Shipping</CardTitle>
+      <div className="flex flex-col gap-[12px]">
+        <label className="flex flex-col gap-[6px]">
+          <span className={fieldLabel}>Carrier</span>
           <Input value={carrier} onChange={(e) => setCarrier(e.target.value)} placeholder="e.g. Pathao, Sundarban, Steadfast" />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-neutral-500">Tracking number</span>
+        <label className="flex flex-col gap-[6px]">
+          <span className={fieldLabel}>Tracking number</span>
           <Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-neutral-500">Tracking URL</span>
+        <label className="flex flex-col gap-[6px]">
+          <span className={fieldLabel}>Tracking URL</span>
           <Input type="url" value={trackingUrl} onChange={(e) => setTrackingUrl(e.target.value)} placeholder="https://" />
         </label>
-        <Button size="sm" variant="secondary" onClick={onSave} disabled={!dirty || update.isPending}>
-          {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Truck className="h-4 w-4" aria-hidden />}
-          <span className="ml-1">Save tracking</span>
-        </Button>
+        {/* Flowbite alternative button */}
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!dirty || update.isPending}
+          className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[14px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {update.isPending ? <Loader2 className="h-[14px] w-[14px] animate-spin" aria-hidden /> : <Truck className="h-[14px] w-[14px]" aria-hidden />}
+          Save tracking
+        </button>
         {order.tracking?.shippedAt ? (
-          <p className="text-xs text-neutral-500">
+          <p className="text-[13px] text-gray-500">
             Shipped {formatDate(order.tracking.shippedAt)}
             {order.tracking.deliveredAt ? ` · Delivered ${formatDate(order.tracking.deliveredAt)}` : ""}
           </p>
         ) : null}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -375,32 +417,32 @@ export function OrderDetailAdminClient({ id }: { id: string }) {
   const { data: order, isLoading, isError, error, refetch } = useAdminOrder(id);
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper"><Spinner /></div>;
+    return <AdminDetailSkeleton lineItems={3} sidebarCards={3} />;
   }
 
   if (isError || !order) {
     const message = error instanceof AdminError ? error.message : "Couldn't load order.";
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
-        <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-        <p className="text-sm text-neutral-500">{message}</p>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
+        <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+        <p className="text-[14px] text-gray-500">{message}</p>
+        <div className="flex items-center gap-[8px]">
           <Button variant="secondary" size="sm" onClick={() => refetch()}>Try again</Button>
-          <Link href="/admin/orders" className="text-sm text-neutral-600 underline-offset-2 hover:underline">Back to orders</Link>
+          <Link href="/admin/orders" className="text-[14px] text-gray-600 underline-offset-2 hover:underline">Back to orders</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <Link href="/admin/orders" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-ink">
-            <ArrowLeft className="h-4 w-4" aria-hidden /> Back to orders
+    <div className="flex flex-col gap-[16px]">
+      <header className="flex flex-wrap items-start justify-between gap-[16px]">
+        <div className="flex flex-col gap-[4px]">
+          <Link href="/admin/orders" className="inline-flex items-center gap-[6px] text-[14px] font-medium text-gray-500 transition-colors hover:text-[#1A56DB]">
+            <ArrowLeft className="h-[16px] w-[16px]" aria-hidden /> Back to orders
           </Link>
-          <h1 className="font-mono text-2xl font-semibold text-ink">{order.orderNumber}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-500">
+          <h1 className="font-mono text-[24px] font-bold text-gray-900">{order.orderNumber}</h1>
+          <div className="flex flex-wrap items-center gap-[8px] text-[14px] text-gray-500">
             <StatusPill status={order.status} />
             <Badge variant={order.payment.status === "paid" ? "solid" : "muted"}>{order.payment.status}</Badge>
             <span>·</span>
@@ -408,31 +450,51 @@ export function OrderDetailAdminClient({ id }: { id: string }) {
             {order.cancelledAt ? <><span>·</span><span>Cancelled {formatDate(order.cancelledAt)}</span></> : null}
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2 text-right">
-          <Link href={`/admin/orders/${order._id}/invoice`} target="_blank" rel="noopener"
-            className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 bg-paper px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50">
-            <Printer className="h-3.5 w-3.5" aria-hidden /> Print invoice
-          </Link>
-          <div className="text-xs text-neutral-500">Total</div>
-          <div className="text-2xl font-semibold tabular-nums text-ink">{formatMoney(order.total, order.currency)}</div>
+        <div className="flex flex-col items-end gap-[8px] text-right">
+          {/* Flowbite alternative buttons */}
+          <div className="flex flex-wrap items-center justify-end gap-[8px]">
+            <Link
+              href={`/admin/orders/${order._id}/sticker`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[12px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
+            >
+              <Tag className="h-[14px] w-[14px]" aria-hidden /> Generate sticker
+            </Link>
+            <Link
+              href={`/admin/orders/${order._id}/invoice`}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[12px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
+            >
+              <Printer className="h-[14px] w-[14px]" aria-hidden /> Print invoice
+            </Link>
+          </div>
+          <div className="text-[13px] text-gray-500">Total</div>
+          <div className="text-[24px] font-bold tabular-nums text-gray-900">{formatMoney(order.total, order.currency)}</div>
         </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-5">
+      {/* Two independent scroll columns on lg: each is sticky and owns its
+          own overflow, so the wheel only moves the column under the cursor
+          while the other stays put. Below lg they stack and the page
+          scrolls normally. 80px = topbar (64px) + main padding (16px). */}
+      <section className="grid grid-cols-1 items-start gap-[16px] lg:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-[16px] lg:sticky lg:top-0 lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto lg:pr-[4px] [scrollbar-width:thin]">
           <OrderItemsEditor order={order} />
           <OrderCustomerEditor order={order} />
           <TimelineCard events={order.timeline ?? []} />
           {order.cancelReason ? (
-            <section className="rounded-sm border border-neutral-200 bg-paper p-3">
-              <h2 className="mb-2 text-sm font-semibold text-ink">Cancellation reason</h2>
-              <p className="text-sm text-neutral-700">{order.cancelReason}</p>
-            </section>
+            <Card>
+              <CardTitle>Cancellation reason</CardTitle>
+              <p className="text-[14px] text-gray-700">{order.cancelReason}</p>
+            </Card>
           ) : null}
         </div>
 
-        <aside className="flex flex-col gap-5">
+        <aside className="flex flex-col gap-[16px] lg:sticky lg:top-0 lg:max-h-[calc(100vh-80px)] lg:overflow-y-auto lg:pr-[4px] [scrollbar-width:thin]">
           <StatusActions order={order} />
+          <OrderCourierPanel order={order} />
           <PaymentActions order={order} />
           <TrackingActions order={order} />
           <DangerZone order={order} />
@@ -441,5 +503,3 @@ export function OrderDetailAdminClient({ id }: { id: string }) {
     </div>
   );
 }
-
-

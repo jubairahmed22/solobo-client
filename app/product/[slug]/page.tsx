@@ -19,6 +19,12 @@ import { QASection } from "./QASection";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:50001";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+// Without this, on-demand rendered product pages are cached indefinitely by
+// the Full Route Cache - admin changes (price, stock, customization
+// assignments) would never show up until the next deploy. 60s keeps the PDP
+// fresh while still absorbing traffic spikes.
+export const revalidate = 60;
+
 interface PageProps {
   params: { slug: string };
 }

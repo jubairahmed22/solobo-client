@@ -89,21 +89,46 @@ export interface AnalyticsAttribution {
   campaigns: CampaignRow[];
 }
 
-/* ── Financial ── */
+/* ── Financial ──
+ * Mirrors services/finance.service.ts - the single source of truth on the
+ * backend. grossRevenue/netRevenue/aov NEVER include delivery charge; it's
+ * tracked separately as deliveryRevenue/deliveryCost/deliveryMargin. See
+ * dataGaps for what's structurally 0 today (payment gateway fee, COD
+ * collection fee, marketing spend) rather than actually zero.
+ */
 
 export interface FinancialSummary {
   grossRevenue: number;
   netRevenue: number;
+  deliveryRevenue: number;
+  deliveryCost: number;
+  deliveryMargin: number;
+  cogs: number;
+  grossProfit: number;
+  operatingExpenses: number;
+  netProfit: number;
+  grossMargin: number;
+  netMargin: number;
   placedOrders: number;
-  deliveredOrders: number;
+  recognizedOrders: number;
+  fullyReturnedOrders: number;
   unitsSold: number;
+  marginCoverage: number;
   aov: number;
+  contributionMarginAvg: number;
   discountsGiven: number;
   taxCollected: number;
   shippingCollected: number;
-  refundsTotal: number;
-  refundedOrders: number;
+  returnedNetValueThisPeriod: number;
+  returnsDecidedCount: number;
   refundRate: number;
+}
+
+export interface FinancialDataGaps {
+  paymentGatewayFeeTracked: false;
+  codCollectionFeeTracked: false;
+  marketingSpendTracked: false;
+  note: string;
 }
 
 export interface FinancialPoint {
@@ -116,9 +141,89 @@ export interface FinancialPoint {
 export interface AnalyticsFinancial {
   range: ReportRange;
   summary: FinancialSummary;
+  dataGaps: FinancialDataGaps;
   timeseries: FinancialPoint[];
   byPaymentMethod: Array<{ method: string; orders: number; revenue: number }>;
-  byStatus: Array<{ status: string; orders: number; revenue: number }>;
+  byStatus: Array<{ status: string; orders: number; orderValue: number }>;
+}
+
+/* ── SKU / category profitability, courier economics, customers, reconciliation ── */
+
+export interface SkuProfitabilityRow {
+  productId: string;
+  sku: string;
+  title: string;
+  categoryId: string | null;
+  categoryName: string;
+  unitsSold: number;
+  netRevenue: number;
+  cogs: number;
+  contributionMargin: number;
+  contributionMarginPct: number;
+  costDataComplete: boolean;
+}
+
+export interface CategoryProfitabilityRow {
+  categoryId: string | null;
+  categoryName: string;
+  unitsSold: number;
+  netRevenue: number;
+  cogs: number;
+  contributionMargin: number;
+  contributionMarginPct: number;
+}
+
+export interface SkuProfitabilityReport {
+  range: ReportRange;
+  skus: SkuProfitabilityRow[];
+  categories: CategoryProfitabilityRow[];
+}
+
+export interface CourierEconomicsRow {
+  provider: string;
+  recognizedOrders: number;
+  deliveryRevenue: number;
+  deliveryCost: number;
+  deliveryMargin: number;
+  deliveryMarginPct: number;
+}
+
+export interface CourierEconomicsReport {
+  range: ReportRange;
+  couriers: CourierEconomicsRow[];
+}
+
+export interface CustomerRow {
+  userId: string;
+  orders: number;
+  netRevenue: number;
+  aov: number;
+}
+
+export interface CustomerMetricsReport {
+  range: ReportRange;
+  registeredCustomersInPeriod: number;
+  guestOrdersInPeriod: number;
+  repeatCustomersInPeriod: number;
+  repeatPurchaseRate: number;
+  avgAovAcrossCustomers: number;
+  topCustomers: CustomerRow[];
+  cac: null;
+  cacGapReason: string;
+}
+
+export interface ReconciliationReport {
+  range: { from: string; to: string };
+  cashReceived: { prepaid: number; codSettled: number; total: number };
+  codPendingSettlement: number;
+  recognizedRevenueComponents: {
+    netRevenue: number;
+    deliveryRevenue: number;
+    taxCollected: number;
+    total: number;
+  };
+  gap: number;
+  gapExplanation: string[];
 }
 
 /* ── Marketing ── */

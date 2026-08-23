@@ -87,48 +87,58 @@ export function UserMenu() {
           className="h-[32px] w-[32px]"
         />
       </DropdownTrigger>
-      <DropdownMenu align="end" className="min-w-[220px]">
-        <div className="flex flex-col px-1.5 py-1">
-          <span className="truncate text-sm font-medium text-ink">
+      {/* Flowbite user dropdown: full-bleed rows on a p-0 panel, 16px muted
+          icons, px-4/py-2 items, gray-100 hovers, divided sections. */}
+      <DropdownMenu align="end" className="min-w-[224px] rounded-[8px] p-0 shadow-lg">
+        <div className="flex flex-col px-[16px] py-[12px]">
+          <span className="truncate text-[14px] font-medium text-gray-900">
             {user.name || user.email.split("@")[0]}
           </span>
-          <span className="truncate text-xs text-neutral-500">{user.email}</span>
+          <span className="truncate text-[13px] text-gray-500">{user.email}</span>
           {user.role !== "user" ? (
-            <span className="mt-1 inline-flex w-fit rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink">
+            <span className="mt-[6px] inline-flex w-fit rounded-[4px] bg-gray-100 px-[8px] py-[2px] text-[10px] font-medium uppercase tracking-wide text-gray-800">
               {user.role}
             </span>
           ) : null}
         </div>
-        <DropdownSeparator />
-        <Link href={dashboardHref} className="block">
-          <DropdownItem>
-            <LayoutDashboard className="h-4 w-4" aria-hidden />
-            <span>Dashboard</span>
+        <DropdownSeparator className="my-0 bg-gray-100" />
+        <div className="py-[4px]">
+          <Link href={dashboardHref} className="block">
+            <DropdownItem className="gap-[10px] rounded-none px-[16px] py-[8px] text-[14px] text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+              <LayoutDashboard className="h-[16px] w-[16px] text-gray-400" aria-hidden />
+              <span>Dashboard</span>
+            </DropdownItem>
+          </Link>
+          <Link href="/account/orders" className="block">
+            <DropdownItem className="gap-[10px] rounded-none px-[16px] py-[8px] text-[14px] text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+              <Package className="h-[16px] w-[16px] text-gray-400" aria-hidden />
+              <span>My orders</span>
+            </DropdownItem>
+          </Link>
+          <Link href="/wishlist" className="block">
+            <DropdownItem className="gap-[10px] rounded-none px-[16px] py-[8px] text-[14px] text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+              <Heart className="h-[16px] w-[16px] text-gray-400" aria-hidden />
+              <span>Wishlist</span>
+            </DropdownItem>
+          </Link>
+          <Link href="/account/profile" className="block">
+            <DropdownItem className="gap-[10px] rounded-none px-[16px] py-[8px] text-[14px] text-gray-700 hover:bg-gray-100 hover:text-gray-900">
+              <Settings className="h-[16px] w-[16px] text-gray-400" aria-hidden />
+              <span>Account settings</span>
+            </DropdownItem>
+          </Link>
+        </div>
+        <DropdownSeparator className="my-0 bg-gray-100" />
+        <div className="py-[4px]">
+          <DropdownItem
+            onClick={onSignOut}
+            destructive
+            className="gap-[10px] rounded-none px-[16px] py-[8px] text-[14px] text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            <LogOut className="h-[16px] w-[16px]" aria-hidden />
+            <span>Sign out</span>
           </DropdownItem>
-        </Link>
-        <Link href="/account/orders" className="block">
-          <DropdownItem>
-            <Package className="h-4 w-4" aria-hidden />
-            <span>My orders</span>
-          </DropdownItem>
-        </Link>
-        <Link href="/wishlist" className="block">
-          <DropdownItem>
-            <Heart className="h-4 w-4" aria-hidden />
-            <span>Wishlist</span>
-          </DropdownItem>
-        </Link>
-        <Link href="/account/profile" className="block">
-          <DropdownItem>
-            <Settings className="h-4 w-4" aria-hidden />
-            <span>Account settings</span>
-          </DropdownItem>
-        </Link>
-        <DropdownSeparator />
-        <DropdownItem onClick={onSignOut} destructive>
-          <LogOut className="h-4 w-4" aria-hidden />
-          <span>Sign out</span>
-        </DropdownItem>
+        </div>
       </DropdownMenu>
     </Dropdown>
   );

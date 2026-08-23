@@ -34,9 +34,10 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/offers": "Offers",
   "/admin/reviews": "Reviews",
   "/admin/questions": "Q&A",
+  "/admin/chat-logs": "Chat Logs",
   "/admin/users": "Users",
   "/admin/audit": "Audit Log",
-  "/admin/company-profile": "Company Profile",
+  "/admin/settings": "Settings",
   "/admin/barcodes": "Barcodes",
   "/admin/integrations": "Integrations",
 };
@@ -161,54 +162,52 @@ export function AdminTopBar({
     .toUpperCase();
 
   return (
-    <header className="flex h-[52px] shrink-0 items-center gap-2.5 border-b border-neutral-100 bg-paper px-3 md:px-4">
-      {/* Mobile hamburger */}
+    <header className="flex h-[64px] shrink-0 items-center gap-[8px] border-b border-gray-200 bg-white px-[16px]">
+      {/* Mobile hamburger - Flowbite navbar toggle */}
       <button
         type="button"
         onClick={onToggleMobile}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 md:hidden"
+        className="inline-flex items-center justify-center rounded-[8px] p-[8px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900 md:hidden"
         aria-label="Open menu"
       >
-        <Menu className="h-[18px] w-[18px]" aria-hidden />
+        <Menu className="h-[24px] w-[24px]" aria-hidden />
       </button>
 
       {/* Desktop collapse toggle */}
       <button
         type="button"
         onClick={onToggleCollapse}
-        className="hidden h-8 w-8 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 md:inline-flex"
+        className="hidden items-center justify-center rounded-[8px] p-[8px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900 md:inline-flex"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {collapsed ? (
-          <PanelLeftOpen className="h-[17px] w-[17px]" aria-hidden />
+          <PanelLeftOpen className="h-[24px] w-[24px]" aria-hidden />
         ) : (
-          <PanelLeftClose className="h-[17px] w-[17px]" aria-hidden />
+          <PanelLeftClose className="h-[24px] w-[24px]" aria-hidden />
         )}
       </button>
 
-      <div className="hidden h-4 w-px bg-neutral-200 md:block" />
-
-      {/* Breadcrumb or page title */}
+      {/* Breadcrumb or page title - Flowbite breadcrumb recipe */}
       {breadcrumb.length > 0 ? (
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-[4px]">
           {breadcrumb.map((seg, i) => {
             const isLast = i === breadcrumb.length - 1;
             return (
               <React.Fragment key={i}>
                 {i > 0 && (
                   <ChevronRight
-                    className="h-3 w-3 shrink-0 text-neutral-300"
+                    className="h-[16px] w-[16px] shrink-0 text-gray-400"
                     aria-hidden
                   />
                 )}
                 {isLast || !seg.href ? (
-                  <span className="text-[13.5px] font-semibold text-neutral-900">
+                  <span className="truncate text-[14px] font-medium text-gray-500">
                     {seg.label}
                   </span>
                 ) : (
                   <Link
                     href={seg.href}
-                    className="text-[13.5px] text-neutral-400 transition-colors hover:text-neutral-700"
+                    className="text-[14px] font-medium text-gray-700 transition duration-75 hover:text-gray-900"
                   >
                     {seg.label}
                   </Link>
@@ -218,54 +217,57 @@ export function AdminTopBar({
           })}
         </nav>
       ) : (
-        <h1 className="text-[13.5px] font-semibold text-neutral-900">
+        <h1 className="truncate text-[16px] font-semibold text-gray-900">
           {pageTitle}
         </h1>
       )}
 
-      {/* Right actions */}
-      <div className="ml-auto flex items-center gap-1.5">
-        {/* Search */}
-        <button
-          type="button"
-          onClick={open}
-          className={cn(
-            "hidden sm:inline-flex items-center gap-2 rounded-sm border border-neutral-200 bg-neutral-50",
-            "h-[30px] px-2.5 text-[12px] text-neutral-400 transition-all duration-150",
-            "hover:border-neutral-300 hover:bg-paper hover:text-neutral-600",
-          )}
-        >
-          <Search className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span>Search</span>
-          <kbd className="ml-1 rounded-sm bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-400 ring-1 ring-neutral-200/80">
-            {isMac ? "⌘K" : "Ctrl K"}
-          </kbd>
-        </button>
+      {/* Search - Flowbite navbar search input (left-aligned, lg:w-96),
+          rendered as a button that opens the command palette. */}
+      <button
+        type="button"
+        onClick={open}
+        className={cn(
+          "relative ml-[16px] hidden h-[36px] items-center rounded-[8px] border border-gray-300 bg-gray-50 md:flex",
+          "w-[200px] pl-[34px] pr-[8px] text-[13px] text-gray-500 transition duration-75",
+          "hover:bg-gray-100 lg:w-[256px]",
+        )}
+      >
+        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[10px]">
+          <Search className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+        </span>
+        <span className="flex-1 truncate text-left">Search</span>
+        <kbd className="ml-[8px] rounded-[4px] border border-gray-200 bg-white px-[6px] py-[2px] text-[11px] font-medium text-gray-500">
+          {isMac ? "⌘K" : "Ctrl K"}
+        </kbd>
+      </button>
 
+      {/* Right actions - Flowbite icon buttons + avatar */}
+      <div className="ml-auto flex items-center gap-[4px]">
         {/* Storefront link */}
         <Link
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+          className="inline-flex items-center justify-center rounded-[8px] p-[8px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
           title="Open storefront"
         >
-          <Store className="h-[17px] w-[17px]" aria-hidden />
+          <Store className="h-[24px] w-[24px]" aria-hidden />
         </Link>
 
         {/* Notification bell */}
         <button
           type="button"
-          className="relative inline-flex h-8 w-8 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+          className="inline-flex items-center justify-center rounded-[8px] p-[8px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
           aria-label="Notifications"
         >
-          <Bell className="h-[17px] w-[17px]" aria-hidden />
+          <Bell className="h-[24px] w-[24px]" aria-hidden />
         </button>
 
         {/* User avatar */}
         {session?.user && (
           <div
-            className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-ink text-[12px] font-bold text-accent"
+            className="ml-[8px] flex h-[32px] w-[32px] items-center justify-center rounded-full bg-gray-900 text-[13px] font-semibold text-white"
             title={session.user.name ?? session.user.email ?? "Admin"}
           >
             {initial}

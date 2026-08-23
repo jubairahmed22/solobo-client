@@ -10,6 +10,7 @@ function settings(partial: Partial<SiteSettings>): SiteSettings {
     companyName: "Solobo",
     companyTitle: "",
     companyLogo: "",
+    invoiceLogo: "",
     shortDescription: "",
     delivery: { insideDhaka: 60, outsideDhaka: 120, freeShippingThreshold: 1500 },
     contact: {},

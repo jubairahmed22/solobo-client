@@ -123,7 +123,7 @@ const ITEMS: PaletteItem[] = [
   { id: "pos",              label: "POS",                   href: "/admin/pos",                    Icon: ScanLine,        group: "Navigate", keywords: "point of sale" },
   { id: "barcodes",         label: "Barcodes",              href: "/admin/barcodes",               Icon: Barcode,         group: "Navigate", keywords: "scan print label qr code sku" },
   { id: "audit",            label: "Audit log",             href: "/admin/audit",                  Icon: History,         group: "Navigate", keywords: "logs history activity" },
-  { id: "company-profile",  label: "Company profile",       href: "/admin/company-profile",        Icon: Building2,       group: "Navigate", keywords: "settings store info" },
+  { id: "settings",         label: "Settings",              href: "/admin/settings",                Icon: Building2,       group: "Navigate", keywords: "company profile store info" },
   // Create
   { id: "new-product",      label: "New product",           href: "/admin/products/new",           Icon: Plus,            group: "Create" },
   { id: "new-category",     label: "New category",          href: "/admin/categories/new",         Icon: Plus,            group: "Create" },
@@ -317,7 +317,7 @@ export function AdminCommandPalette({ children }: { children: React.ReactNode })
 
           {/* Panel */}
           <div
-            className="relative z-10 w-full max-w-[660px] overflow-hidden rounded-sm border border-neutral-200 bg-paper shadow-[0_20px_60px_-10px_rgba(0,0,0,0.22),0_0_0_1px_rgba(0,0,0,0.04)]"
+            className="relative z-10 w-full max-w-[660px] overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-[0_20px_60px_-10px_rgba(0,0,0,0.22),0_0_0_1px_rgba(0,0,0,0.04)]"
             style={{ animation: "palette-in 140ms cubic-bezier(0.16,1,0.3,1) both" }}
             role="dialog"
             aria-modal
@@ -383,23 +383,23 @@ export function AdminCommandPalette({ children }: { children: React.ReactNode })
                             onClick={() => navigate(item.href)}
                             onMouseEnter={() => setActiveIndex(idx)}
                             className={cn(
-                              "flex w-full items-center gap-2.5 rounded-sm px-2.5 py-[7px] text-left transition-colors duration-75",
+                              "flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-[7px] text-left transition-colors duration-75",
                               isActive
-                                ? "bg-ink text-paper"
-                                : "hover:bg-neutral-50",
+                                ? "bg-gray-100 text-gray-900"
+                                : "hover:bg-gray-50",
                             )}
                           >
                             <item.Icon
                               className={cn(
                                 "h-[15px] w-[15px] shrink-0",
-                                isActive ? "text-accent" : "text-neutral-400",
+                                isActive ? "text-[#1A56DB]" : "text-gray-400",
                               )}
                               aria-hidden
                             />
                             <span
                               className={cn(
                                 "min-w-0 flex-1 truncate text-[13px] font-medium",
-                                isActive ? "text-paper" : "text-neutral-800",
+                                isActive ? "text-gray-900" : "text-gray-700",
                               )}
                             >
                               {query ? (
@@ -409,7 +409,7 @@ export function AdminCommandPalette({ children }: { children: React.ReactNode })
                               )}
                             </span>
                             {isActive ? (
-                              <kbd className="ml-auto shrink-0 rounded-sm border border-neutral-700 bg-neutral-800 px-1 py-0.5 font-mono text-[10px] text-neutral-400">
+                              <kbd className="ml-auto shrink-0 rounded-[4px] border border-gray-200 bg-white px-1 py-0.5 font-mono text-[10px] text-gray-500">
                                 ↵
                               </kbd>
                             ) : null}

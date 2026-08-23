@@ -77,6 +77,8 @@ export interface SiteSettings {
   companyName: string;
   companyTitle: string;
   companyLogo: string;
+  /** Separate logo shown on printed invoices only - falls back to companyLogo when unset. */
+  invoiceLogo: string;
   shortDescription: string;
   delivery: SiteSettingsDelivery;
   announcementBar?: SiteSettingsAnnouncementBar;
@@ -101,6 +103,7 @@ export interface UpdateSiteSettingsBody {
   companyName?: string;
   companyTitle?: string;
   companyLogo?: string;
+  invoiceLogo?: string;
   shortDescription?: string;
   delivery?: Partial<SiteSettingsDelivery>;
   announcementBar?: Partial<SiteSettingsAnnouncementBar>;

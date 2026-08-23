@@ -12,7 +12,9 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { Button, Input, Spinner } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { AdminTabs } from "@/components/admin/AdminTabs";
+import { AdminTreeSkeleton } from "@/components/admin/Skeleton";
 import { cn } from "@/lib/utils/cn";
 import { useAdminCategories } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
@@ -78,9 +80,9 @@ function CategoryTreeRow({
               type="button"
               onClick={() => hasChildren && onToggle(node._id)}
               className={cn(
-                "flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-neutral-400 transition-colors",
+                "flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-[6px] text-gray-400 transition-colors",
                 hasChildren
-                  ? "hover:bg-neutral-100 hover:text-ink"
+                  ? "hover:bg-gray-100 hover:text-gray-900"
                   : "cursor-default opacity-0",
               )}
               aria-expanded={isExpanded}
@@ -88,7 +90,7 @@ function CategoryTreeRow({
             >
               <ChevronRight
                 className={cn(
-                  "h-3 w-3 transition-transform duration-150",
+                  "h-[16px] w-[16px] transition-transform duration-150",
                   isExpanded && "rotate-90",
                 )}
                 aria-hidden
@@ -96,7 +98,7 @@ function CategoryTreeRow({
             </button>
 
             {/* thumbnail */}
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-neutral-200 bg-neutral-50 text-neutral-400">
+            <span className="flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-gray-200 bg-gray-50 text-gray-400">
               {node.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -106,19 +108,27 @@ function CategoryTreeRow({
                   loading="lazy"
                 />
               ) : (
-                <FolderTree className="h-3 w-3" aria-hidden />
+                <FolderTree className="h-[16px] w-[16px]" aria-hidden />
               )}
             </span>
 
             {/* name + path */}
             <div className="min-w-0 flex-1">
-              <Link
-                href={`/admin/categories/${node._id}`}
-                className="block truncate text-sm font-medium text-ink underline-offset-2 hover:underline"
-              >
-                {node.name}
-              </Link>
-              <p className="truncate text-[11px] text-neutral-400">/{node.path}</p>
+              <div className="flex items-center gap-[6px]">
+                <Link
+                  href={`/admin/categories/${node._id}`}
+                  className="min-w-0 truncate text-[14px] font-medium text-gray-900 underline-offset-2 hover:text-[#1A56DB] hover:underline"
+                >
+                  {node.name}
+                </Link>
+                {/* Status column is hidden on phones - flag hidden ones inline */}
+                {!node.isActive ? (
+                  <span className="shrink-0 rounded-[4px] bg-gray-100 px-[6px] py-[1px] text-[10px] font-medium text-gray-800 sm:hidden">
+                    Hidden
+                  </span>
+                ) : null}
+              </div>
+              <p className="truncate text-[11px] text-gray-400">/{node.path}</p>
             </div>
           </div>
         </td>
@@ -127,10 +137,10 @@ function CategoryTreeRow({
         <td className="hidden py-2 px-2 align-middle sm:table-cell">
           <span
             className={cn(
-              "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold",
+              "inline-flex items-center rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium",
               node.isActive
-                ? "bg-accent/20 text-ink"
-                : "bg-neutral-100 text-neutral-500",
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-800",
             )}
           >
             {node.isActive ? "Active" : "Hidden"}
@@ -144,20 +154,20 @@ function CategoryTreeRow({
 
         {/* Actions (appear on row hover) */}
         <td className="py-2 pl-2 pr-3 align-middle">
-          <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
             <Link
               href={`/admin/categories/new?parent=${node._id}`}
               title="Add subcategory"
-              className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-accent/20 hover:text-ink"
+              className="inline-flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-[#1A56DB]"
             >
-              <Plus className="h-3 w-3" aria-hidden />
+              <Plus className="h-[16px] w-[16px]" aria-hidden />
             </Link>
             <Link
               href={`/admin/categories/${node._id}`}
               title="Edit"
-              className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-ink"
+              className="inline-flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
             >
-              <Edit2 className="h-3 w-3" aria-hidden />
+              <Edit2 className="h-[16px] w-[16px]" aria-hidden />
             </Link>
           </div>
         </td>
@@ -187,7 +197,7 @@ function FlatCategoryRow({ category }: { category: AdminCategorySummary }) {
     <tr className="group border-b border-neutral-100 transition-colors last:border-0 hover:bg-neutral-50">
       <td className="px-3 py-2 align-middle">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-neutral-200 bg-neutral-50 text-neutral-400">
+          <span className="flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-gray-200 bg-gray-50 text-gray-400">
             {category.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -197,27 +207,34 @@ function FlatCategoryRow({ category }: { category: AdminCategorySummary }) {
                 loading="lazy"
               />
             ) : (
-              <FolderTree className="h-3 w-3" aria-hidden />
+              <FolderTree className="h-[16px] w-[16px]" aria-hidden />
             )}
           </span>
           <div className="min-w-0 flex-1">
-            <Link
-              href={`/admin/categories/${category._id}`}
-              className="block truncate text-sm font-medium text-ink underline-offset-2 hover:underline"
-            >
-              {category.name}
-            </Link>
-            <p className="truncate text-[11px] text-neutral-400">/{category.path}</p>
+            <div className="flex items-center gap-[6px]">
+              <Link
+                href={`/admin/categories/${category._id}`}
+                className="min-w-0 truncate text-[14px] font-medium text-gray-900 underline-offset-2 hover:text-[#1A56DB] hover:underline"
+              >
+                {category.name}
+              </Link>
+              {!category.isActive ? (
+                <span className="shrink-0 rounded-[4px] bg-gray-100 px-[6px] py-[1px] text-[10px] font-medium text-gray-800 sm:hidden">
+                  Hidden
+                </span>
+              ) : null}
+            </div>
+            <p className="truncate text-[11px] text-gray-400">/{category.path}</p>
           </div>
         </div>
       </td>
       <td className="hidden px-2 py-2 align-middle sm:table-cell">
         <span
           className={cn(
-            "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold",
+            "inline-flex items-center rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium",
             category.isActive
-              ? "bg-accent/20 text-ink"
-              : "bg-neutral-100 text-neutral-500",
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800",
           )}
         >
           {category.isActive ? "Active" : "Hidden"}
@@ -228,16 +245,16 @@ function FlatCategoryRow({ category }: { category: AdminCategorySummary }) {
           <Link
             href={`/admin/categories/new?parent=${category._id}`}
             title="Add subcategory"
-            className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-accent/20 hover:text-ink"
+            className="inline-flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-[#1A56DB]"
           >
-            <Plus className="h-3 w-3" aria-hidden />
+            <Plus className="h-[16px] w-[16px]" aria-hidden />
           </Link>
           <Link
             href={`/admin/categories/${category._id}`}
             title="Edit"
-            className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-ink"
+            className="inline-flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
           >
-            <Edit2 className="h-3 w-3" aria-hidden />
+            <Edit2 className="h-[16px] w-[16px]" aria-hidden />
           </Link>
         </div>
       </td>
@@ -303,124 +320,113 @@ export function CategoriesAdminClient() {
   const collapseAll = () => setExpanded(new Set());
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-[12px]">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Categories</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <h1 className="text-[20px] font-bold leading-tight text-gray-900 sm:text-[24px]">Categories</h1>
+          <p className="mt-[4px] text-[13px] text-gray-500 sm:text-[14px]">
             {data
-              ? `${data.meta?.total ?? 0} categories · hover a row to add a subcategory`
+              ? `${data.meta?.total ?? 0} categories in the catalog taxonomy.`
               : "Browse and manage the catalog taxonomy."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[8px]">
+          {/* Flowbite primary button */}
           <Link
             href="/admin/categories/new"
-            className="inline-flex items-center gap-1.5 rounded-sm bg-ink px-3 py-2 text-sm font-medium text-paper transition-colors hover:bg-neutral-800"
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[16px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F]"
           >
-            <Plus className="h-4 w-4" aria-hidden /> New category
+            <Plus className="h-[16px] w-[16px]" aria-hidden /> New category
           </Link>
         </div>
       </header>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-sm border border-neutral-200 bg-paper px-4 py-3">
+      {/* Status tabs - Flowbite underline tabs */}
+      <AdminTabs
+        ariaLabel="Category status filter"
+        items={[
+          { value: "all", label: "All" },
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Hidden" },
+        ]}
+        value={statusFilter}
+        onChange={(v) => update({ status: v === "all" ? undefined : v })}
+      />
+
+      {/* Filter bar - Flowbite table toolbar */}
+      <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm lg:flex-row lg:items-center">
         {/* Search */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             update({ q: qDraft.trim() || undefined });
           }}
-          className="flex min-w-[200px] flex-1 items-center gap-2"
+          className="flex w-full min-w-0 flex-1 items-center gap-[8px]"
         >
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" aria-hidden />
+          <label htmlFor="categories-search" className="sr-only">Search categories</label>
+          <div className="relative min-w-0 flex-1 lg:max-w-[420px]">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+              <Search className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+            </div>
             <Input
+              id="categories-search"
               type="search"
               value={qDraft}
               onChange={(e) => setQDraft(e.target.value)}
               placeholder="Search categories…"
-              className="pl-8"
+              className="pl-[36px]"
             />
           </div>
           <button
             type="submit"
-            className="rounded-full border border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-neutral-400 hover:text-ink"
+            className="h-[40px] shrink-0 rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F]"
           >
             Find
           </button>
         </form>
 
-        <div className="h-5 w-px bg-neutral-200" />
-
-        {/* Status pills */}
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-xs font-medium text-neutral-400">Status</span>
-          {(["all", "active", "inactive"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => update({ status: s === "all" ? undefined : s })}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                statusFilter === s
-                  ? "border-ink bg-ink text-paper"
-                  : "border-neutral-200 text-neutral-600 hover:border-neutral-400 hover:text-ink",
-              )}
-            >
-              {s === "all" ? "All" : s === "active" ? "Active" : "Hidden"}
-            </button>
-          ))}
-        </div>
-
-        {/* Expand / collapse */}
-        {!isFiltering && flat.length > 0 ? (
-          <>
-            <div className="h-5 w-px bg-neutral-200" />
-            <div className="flex items-center gap-1 text-xs text-neutral-400">
+        <div className="flex flex-wrap items-center gap-[12px] lg:ml-auto lg:shrink-0 lg:justify-end">
+          {/* Expand / collapse */}
+          {!isFiltering && flat.length > 0 ? (
+            <div className="flex items-center gap-[4px] text-[13px] font-medium text-gray-500">
               <button
                 type="button"
                 onClick={expandAll}
-                className="underline-offset-2 hover:text-ink hover:underline"
+                className="underline-offset-2 transition duration-75 hover:text-[#1A56DB] hover:underline"
               >
                 Expand all
               </button>
-              <span>/</span>
+              <span className="text-gray-300">/</span>
               <button
                 type="button"
                 onClick={collapseAll}
-                className="underline-offset-2 hover:text-ink hover:underline"
+                className="underline-offset-2 transition duration-75 hover:text-[#1A56DB] hover:underline"
               >
                 Collapse
               </button>
             </div>
-          </>
-        ) : null}
+          ) : null}
 
-        {isFiltering ? (
-          <>
-            <div className="h-5 w-px bg-neutral-200" />
+          {isFiltering ? (
             <button
               type="button"
               onClick={() => router.replace(pathname, { scroll: false })}
-              className="flex items-center gap-1 text-xs text-neutral-400 hover:text-ink"
+              className="inline-flex h-[40px] items-center gap-[6px] rounded-[8px] border border-gray-200 bg-white px-[12px] text-[13px] font-medium text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
             >
-              <X className="h-3 w-3" aria-hidden /> Clear
+              <X className="h-[14px] w-[14px]" aria-hidden /> Clear
             </button>
-          </>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-sm border border-neutral-200 bg-paper">
-          <Spinner />
-        </div>
+        <AdminTreeSkeleton rows={9} />
       ) : isError ? (
-        <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
-          <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-          <p className="text-sm text-neutral-500">
+        <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
+          <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+          <p className="text-[14px] text-gray-500">
             {error instanceof AdminError ? error.message : "Couldn't load categories."}
           </p>
           <Button variant="secondary" size="sm" onClick={() => refetch()}>
@@ -428,22 +434,22 @@ export function CategoriesAdminClient() {
           </Button>
         </div>
       ) : flat.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-neutral-200 bg-paper py-14 text-center">
-          <FolderTree className="h-8 w-8 text-neutral-200" aria-hidden />
-          <p className="font-medium text-neutral-600">
+        <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 bg-white py-[56px] text-center">
+          <FolderTree className="h-[32px] w-[32px] text-gray-300" aria-hidden />
+          <p className="text-[14px] font-medium text-gray-600">
             {isFiltering ? "No categories match these filters." : "No categories yet."}
           </p>
           {!isFiltering ? (
             <Link
               href="/admin/categories/new"
-              className="text-xs font-medium text-neutral-500 underline-offset-2 hover:text-ink hover:underline"
+              className="text-[13px] font-medium text-[#1A56DB] underline-offset-2 hover:underline"
             >
               Create your first category →
             </Link>
           ) : null}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-sm border border-neutral-200 bg-paper">
+        <div className="overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm">
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">

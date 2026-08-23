@@ -8,9 +8,9 @@ import { useSession } from "next-auth/react";
 import {
   BadgePercent,
   Barcode,
+  Bot,
   Building2,
   ChevronDown,
-  ChevronRight,
   DollarSign,
   ExternalLink,
   Filter,
@@ -27,6 +27,7 @@ import {
   Route,
   ScanLine,
   Search,
+  Settings,
   ShoppingBag,
   Sparkles,
   Tag,
@@ -38,7 +39,11 @@ import { cn } from "@/lib/utils/cn";
 import { COMPANY } from "@/lib/entity/company";
 import { usePalette, useIsMac, PaletteShortcutHint } from "./AdminCommandPalette";
 
-/* ─────────────── Nav structure ─────────────── */
+/* ─────────────── Nav structure ───────────────
+ * Flowbite's application-UI sidebar has no section headings - groups are
+ * separated by a top border instead - so section labels here only feed the
+ * collapsed-rail tooltips / aria, not visible headings.
+ */
 
 interface NavItem {
   href: string;
@@ -96,6 +101,7 @@ const NAV: NavSection[] = [
     items: [
       { href: "/admin/reviews", label: "Reviews", Icon: MessageSquare },
       { href: "/admin/questions", label: "Q&A", Icon: HelpCircle },
+      { href: "/admin/chat-logs", label: "Chat Logs", Icon: Bot },
       { href: "/admin/users", label: "Users", Icon: Users },
     ],
   },
@@ -103,13 +109,18 @@ const NAV: NavSection[] = [
     label: "Settings",
     items: [
       { href: "/admin/audit", label: "Audit Log", Icon: History },
-      { href: "/admin/company-profile", label: "Company Profile", Icon: Building2 },
+      { href: "/admin/settings", label: "Settings", Icon: Building2 },
       { href: "/admin/integrations", label: "Integrations", Icon: Plug },
     ],
   },
 ];
 
-/* ─────────────── Nav link ─────────────── */
+/* ─────────────── Nav link ───────────────
+ * Flowbite item recipe: p-2 rounded-lg text-base font-medium text-gray-900,
+ * hover:bg-gray-100, current page bg-gray-100; icons w-6 h-6 text-gray-400
+ * that darken to gray-900 on hover/active. Children drop the icon and indent
+ * with pl-11. All spacing is explicit px because of this repo's 8px scale.
+ */
 
 function NavLink({
   href,
@@ -128,40 +139,71 @@ function NavLink({
   depth?: number;
   onClick?: () => void;
 }) {
+  if (collapsed) {
+    return (
+      <Link
+        href={href}
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        title={label}
+        className={cn(
+          "group flex h-[40px] w-[40px] items-center justify-center rounded-[8px] transition duration-75",
+          active ? "bg-gray-100" : "hover:bg-gray-100",
+        )}
+      >
+        <Icon
+          className={cn(
+            "h-[24px] w-[24px] shrink-0 transition duration-75",
+            active ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900",
+          )}
+          aria-hidden
+        />
+      </Link>
+    );
+  }
+
+  if (depth > 0) {
+    return (
+      <Link
+        href={href}
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "group flex w-full items-center rounded-[8px] p-[8px] pl-[44px] text-[16px] font-medium text-gray-900 transition duration-75",
+          active ? "bg-gray-100" : "hover:bg-gray-100",
+        )}
+      >
+        <span className="truncate">{label}</span>
+      </Link>
+    );
+  }
+
   return (
     <Link
       href={href}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      title={collapsed ? label : undefined}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-sm text-[13px] leading-none transition-all duration-150",
-        collapsed
-          ? "h-9 w-9 justify-center"
-          : depth > 0
-            ? "py-[7px] pl-[28px] pr-2.5"
-            : "px-2.5 py-[7px]",
-        active
-          ? "bg-ink font-semibold text-paper"
-          : "font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900",
+        "group flex items-center rounded-[8px] p-[8px] text-[16px] font-medium text-gray-900 transition duration-75",
+        active ? "bg-gray-100" : "hover:bg-gray-100",
       )}
     >
       <Icon
         className={cn(
-          "shrink-0 transition-colors",
-          collapsed ? "h-[17px] w-[17px]" : "h-[15px] w-[15px]",
-          active
-            ? "text-accent"
-            : "opacity-60 group-hover:opacity-100",
+          "h-[24px] w-[24px] shrink-0 transition duration-75",
+          active ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900",
         )}
         aria-hidden
       />
-      {!collapsed && <span className="truncate">{label}</span>}
+      <span className="ml-[12px] truncate">{label}</span>
     </Link>
   );
 }
 
-/* ─────────────── Analytics expandable group ─────────────── */
+/* ─────────────── Analytics expandable group ───────────────
+ * Flowbite collapse dropdown: trigger looks like a nav item with a trailing
+ * chevron; the open list is py-2 space-y-2 with icon-less pl-11 children.
+ */
 
 function AnalyticsGroup({
   item,
@@ -203,57 +245,60 @@ function AnalyticsGroup({
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className={cn(
-          "group flex w-full items-center gap-2.5 rounded-sm px-2.5 py-[7px] text-[13px] leading-none transition-all duration-150",
-          anyActive
-            ? "bg-ink font-semibold text-paper"
-            : "font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900",
-        )}
+        aria-expanded={open}
+        className="group flex w-full items-center rounded-[8px] p-[8px] text-[16px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
       >
         <item.Icon
           className={cn(
-            "h-[15px] w-[15px] shrink-0 transition-colors",
-            anyActive ? "text-accent" : "opacity-60 group-hover:opacity-100",
+            "h-[24px] w-[24px] shrink-0 transition duration-75",
+            anyActive ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900",
           )}
           aria-hidden
         />
-        <span className="flex-1 truncate text-left">{item.label}</span>
-        {open ? (
-          <ChevronDown className="h-[11px] w-[11px] shrink-0 opacity-40" aria-hidden />
-        ) : (
-          <ChevronRight className="h-[11px] w-[11px] shrink-0 opacity-40" aria-hidden />
-        )}
+        <span className="ml-[12px] flex-1 truncate whitespace-nowrap text-left">
+          {item.label}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-[24px] w-[24px] shrink-0 text-gray-400 transition-transform duration-150",
+            open && "rotate-180",
+          )}
+          aria-hidden
+        />
       </button>
 
       {open && item.children && (
-        <div className="ml-[21px] mt-0.5 border-l border-neutral-200 pl-[9px]">
-          <NavLink
-            href={item.href}
-            label="Overview"
-            Icon={item.Icon}
-            active={selfActive ?? false}
-            collapsed={false}
-            depth={1}
-            onClick={onLinkClick}
-          />
+        <ul className="space-y-[8px] py-[8px]">
+          <li>
+            <NavLink
+              href={item.href}
+              label="Overview"
+              Icon={item.Icon}
+              active={selfActive ?? false}
+              collapsed={false}
+              depth={1}
+              onClick={onLinkClick}
+            />
+          </li>
           {item.children.map((child) => {
             const active =
               pathname === child.href ||
               (pathname?.startsWith(`${child.href}/`) ?? false);
             return (
-              <NavLink
-                key={child.href}
-                href={child.href}
-                label={child.label}
-                Icon={child.Icon}
-                active={active}
-                collapsed={false}
-                depth={1}
-                onClick={onLinkClick}
-              />
+              <li key={child.href}>
+                <NavLink
+                  href={child.href}
+                  label={child.label}
+                  Icon={child.Icon}
+                  active={active}
+                  collapsed={false}
+                  depth={1}
+                  onClick={onLinkClick}
+                />
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );
@@ -281,83 +326,86 @@ function SidebarContent({
     (session?.user as { role?: string } | undefined)?.role ?? "admin";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden bg-white">
       {/* ── Brand ── */}
       <div
         className={cn(
-          "flex h-[52px] shrink-0 items-center gap-2.5 border-b border-neutral-100",
-          collapsed ? "justify-center px-[10px]" : "px-[14px]",
+          "flex h-[64px] shrink-0 items-center border-b border-gray-200",
+          collapsed ? "justify-center px-[12px]" : "px-[16px]",
         )}
       >
         <Image
           src="/logo.png"
           alt={COMPANY.name}
-          width={26}
-          height={26}
-          className="shrink-0 rounded-sm"
+          width={32}
+          height={32}
+          className="shrink-0 rounded-[4px]"
           priority
         />
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-bold tracking-tight text-ink">
-              {COMPANY.name}
-            </p>
-            <p className="truncate text-[10.5px] leading-tight text-neutral-400">
-              Admin Console
-            </p>
-          </div>
+          <span className="ml-[12px] truncate text-[20px] font-semibold text-gray-900">
+            {COMPANY.name}
+          </span>
         )}
       </div>
 
-      {/* ── Search ── */}
-      <div className={cn("px-[10px] pb-1.5 pt-2.5", collapsed && "px-[8px]")}>
-        <button
-          type="button"
-          onClick={() => {
-            openPalette();
-            onLinkClick?.();
-          }}
-          title={collapsed ? "Search" : undefined}
-          className={cn(
-            "flex w-full items-center gap-2 rounded-sm border border-neutral-200 bg-neutral-50",
-            "text-[12px] text-neutral-400 transition-all duration-150",
-            "hover:border-neutral-300 hover:bg-paper hover:text-neutral-600",
-            collapsed ? "h-9 justify-center" : "h-[30px] px-2.5",
-          )}
-        >
-          <Search className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {!collapsed && (
-            <>
-              <span className="flex-1 text-left">Search…</span>
-              <PaletteShortcutHint isMac={isMac} />
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* ── Navigation ── */}
-      <nav
-        aria-label="Admin navigation"
-        className="flex-1 overflow-y-auto px-[10px] pb-2"
+      {/* ── Scrollable nav ── */}
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto py-[20px]",
+          collapsed ? "px-[12px]" : "px-[12px]",
+        )}
         style={{ scrollbarWidth: "none" }}
       >
-        {NAV.map((section, si) => (
-          <div key={section.label} className={si > 0 ? "mt-[14px]" : "mt-1"}>
-            {collapsed ? (
-              si > 0 && (
-                <div className="mx-auto mb-[10px] h-px w-5 bg-neutral-200" />
-              )
-            ) : (
-              <p className="mb-[5px] px-2.5 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
-                {section.label}
-              </p>
-            )}
+        {/* Search - styled like Flowbite's sidebar search input, but it's a
+            button that opens the command palette. */}
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={() => {
+              openPalette();
+              onLinkClick?.();
+            }}
+            title="Search"
+            className="group mb-[16px] flex h-[40px] w-[40px] items-center justify-center rounded-[8px] transition duration-75 hover:bg-gray-100"
+          >
+            <Search
+              className="h-[24px] w-[24px] text-gray-400 transition duration-75 group-hover:text-gray-900"
+              aria-hidden
+            />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              openPalette();
+              onLinkClick?.();
+            }}
+            className="relative mb-[16px] flex w-full items-center rounded-[8px] border border-gray-300 bg-gray-50 p-[8px] pl-[40px] text-[14px] text-gray-500 transition duration-75 hover:bg-gray-100"
+          >
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+              <Search className="h-[20px] w-[20px] text-gray-500" aria-hidden />
+            </span>
+            <span className="flex-1 truncate text-left">Search</span>
+            <PaletteShortcutHint isMac={isMac} />
+          </button>
+        )}
 
-            <ul className="flex flex-col gap-0.5">
+        <nav aria-label="Admin navigation">
+          {NAV.map((section, si) => (
+            <ul
+              key={section.label}
+              aria-label={section.label}
+              className={cn(
+                "space-y-[8px]",
+                si > 0 && "mt-[20px] border-t border-gray-200 pt-[20px]",
+                collapsed && "flex flex-col items-center",
+              )}
+            >
               {section.items.map((item) => {
                 if (item.children) {
                   return (
-                    <li key={item.href}>
+                    <li key={item.href} className={cn(!collapsed && "w-full")}>
                       <AnalyticsGroup
                         item={item}
                         pathname={pathname}
@@ -372,7 +420,7 @@ function SidebarContent({
                   : pathname === item.href ||
                     (pathname?.startsWith(`${item.href}/`) ?? false);
                 return (
-                  <li key={item.href}>
+                  <li key={item.href} className={cn(!collapsed && "w-full")}>
                     <NavLink
                       href={item.href}
                       label={item.label}
@@ -385,53 +433,40 @@ function SidebarContent({
                 );
               })}
             </ul>
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
+      </div>
 
-      {/* ── User footer ── */}
-      <div className="shrink-0 border-t border-neutral-100">
-        {collapsed ? (
-          <div className="flex flex-col items-center gap-1.5 py-2.5">
-            <div
-              title={userName}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-accent"
-            >
-              {initial}
-            </div>
-            <Link
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Open storefront"
-              className="flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-ink"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2.5 px-[14px] py-2.5">
-            <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-ink text-[12px] font-bold text-accent">
-              {initial}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-semibold leading-tight text-ink">
-                {userName}
-              </p>
-              <p className="truncate text-[11px] capitalize leading-tight text-neutral-400">
-                {userRole}
-              </p>
-            </div>
-            <Link
-              href="/"
-              target="_blank"
-              title="Open storefront"
-              className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-sm text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-ink"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </div>
+      {/* ── Bottom icon bar - Flowbite's centered icon row ── */}
+      <div
+        className={cn(
+          "flex shrink-0 items-center justify-center bg-white p-[16px]",
+          collapsed ? "flex-col gap-[8px]" : "space-x-[16px]",
         )}
+      >
+        <span
+          title={`${userName} (${userRole})`}
+          className="flex h-[32px] w-[32px] shrink-0 cursor-default items-center justify-center rounded-full bg-gray-900 text-[13px] font-semibold text-white"
+        >
+          {initial}
+        </span>
+        <Link
+          href="/admin/settings"
+          onClick={onLinkClick}
+          title="Settings"
+          className="inline-flex items-center justify-center rounded-[4px] p-[8px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+        >
+          <Settings className="h-[24px] w-[24px]" aria-hidden />
+        </Link>
+        <Link
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open storefront"
+          className="inline-flex items-center justify-center rounded-[4px] p-[8px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+        >
+          <ExternalLink className="h-[24px] w-[24px]" aria-hidden />
+        </Link>
       </div>
     </div>
   );
@@ -455,8 +490,8 @@ export function AdminSidebar({
       {/* Desktop - always in flow, width transitions */}
       <aside
         className={cn(
-          "hidden h-full flex-col border-r border-neutral-100 bg-paper transition-[width] duration-200 ease-out md:flex",
-          collapsed ? "w-[52px]" : "w-[232px]",
+          "hidden h-full flex-col border-r border-gray-200 bg-white transition-[width] duration-200 ease-out md:flex",
+          collapsed ? "w-[64px]" : "w-[256px]",
         )}
       >
         <SidebarContent collapsed={collapsed} />
@@ -472,14 +507,14 @@ export function AdminSidebar({
       >
         <div
           className={cn(
-            "absolute inset-0 bg-neutral-900/50 transition-opacity duration-200",
+            "absolute inset-0 bg-gray-900/50 transition-opacity duration-200",
             mobileOpen ? "opacity-100" : "opacity-0",
           )}
           onClick={onMobileClose}
         />
         <aside
           className={cn(
-            "absolute inset-y-0 left-0 flex w-[260px] flex-col border-r border-neutral-100 bg-paper shadow-2xl",
+            "absolute inset-y-0 left-0 flex w-[256px] flex-col border-r border-gray-200 bg-white shadow-2xl",
             "transition-transform duration-200 ease-out",
             mobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
@@ -488,9 +523,9 @@ export function AdminSidebar({
             type="button"
             onClick={onMobileClose}
             aria-label="Close menu"
-            className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 hover:bg-neutral-100 hover:text-ink"
+            className="absolute right-[10px] top-[18px] z-10 flex h-[28px] w-[28px] items-center justify-center rounded-[4px] text-gray-500 hover:bg-gray-100 hover:text-gray-900"
           >
-            <X className="h-3.5 w-3.5" aria-hidden />
+            <X className="h-[16px] w-[16px]" aria-hidden />
           </button>
           <SidebarContent collapsed={false} onLinkClick={onMobileClose} />
         </aside>

@@ -2,6 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc *)"
+    ],
+    "additionalDirectories": [
+      "/Users/ascent/Documents/Developer/Projects/solobo_Jubair/Server/src/services",
+      "/Users/ascent/Documents/Developer/Projects/solobo_Jubair/Server/src/routes"
     ]
   }
 }

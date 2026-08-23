@@ -17,7 +17,8 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Button, Badge, Input, Label, Spinner } from "@/components/ui";
+import { Button, Input, Label, Spinner } from "@/components/ui";
+import { AdminFormSkeleton } from "@/components/admin/Skeleton";
 import { uploadsApi, uploadToCloudinary } from "@/lib/api/uploads";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
 import { useUIStore } from "@/store/uiStore";
@@ -117,7 +118,7 @@ function PatchEditor({
     Number(draft.price) >= 0;
 
   return (
-    <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-4">
+    <div className="rounded-[8px] border border-gray-200 bg-gray-50 p-[16px]">
       <p className="mb-3 text-sm font-semibold text-ink">
         {isNew ? "New patch" : "Edit patch"}
       </p>
@@ -171,27 +172,27 @@ function PatchEditor({
               (recommended - shown on product page)
             </span>
           </Label>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-[16px]">
             {draft.imageUrl ? (
               <div className="relative shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={draft.imageUrl}
                   alt="Preview"
-                  className="h-16 w-16 rounded-full border-2 border-neutral-200 object-cover shadow-sm"
+                  className="h-[72px] w-[72px] rounded-full border-2 border-gray-200 object-cover shadow-sm"
                 />
                 <button
                   type="button"
                   onClick={() => onChange({ ...draft, imageUrl: "" })}
                   aria-label="Remove image"
-                  className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                  className="absolute -right-1 -top-1 flex h-[20px] w-[20px] items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
                 >
-                  <X className="h-3 w-3" aria-hidden />
+                  <X className="h-[12px] w-[12px]" aria-hidden />
                 </button>
               </div>
             ) : (
-              <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-full border-2 border-dashed border-neutral-300 bg-neutral-50 text-neutral-300">
-                <ImageIcon className="h-5 w-5" aria-hidden />
+              <div className="flex h-[72px] w-[72px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 text-gray-300">
+                <ImageIcon className="h-[20px] w-[20px]" aria-hidden />
                 <span className="text-[9px] font-medium">No image</span>
               </div>
             )}
@@ -259,11 +260,11 @@ function PatchEditor({
         <div
           onClick={() => onChange({ ...draft, isActive: !draft.isActive })}
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
-            draft.isActive ? "border-ink bg-ink text-paper" : "border-neutral-300 bg-paper",
+            "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border-2 transition-colors",
+            draft.isActive ? "border-[#1A56DB] bg-[#1A56DB] text-white" : "border-neutral-300 bg-paper",
           )}
         >
-          {draft.isActive ? <Check className="h-3 w-3" aria-hidden /> : null}
+          {draft.isActive ? <Check className="h-[12px] w-[12px]" aria-hidden /> : null}
         </div>
         <span className="select-none text-sm text-neutral-700">Active (visible in storefront)</span>
       </label>
@@ -301,25 +302,25 @@ function PatchRow({
   onMoveDown: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-sm border border-neutral-200 bg-paper px-4 py-3">
+    <div className="flex items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white px-[16px] py-[12px]">
       <div className="flex shrink-0 flex-col">
         <button
           type="button"
           onClick={onMoveUp}
           disabled={index === 0}
           aria-label="Move up"
-          className="flex h-5 w-5 items-center justify-center rounded text-neutral-400 hover:bg-neutral-100 hover:text-ink disabled:opacity-30"
+          className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-30"
         >
-          <ChevronUp className="h-3 w-3" aria-hidden />
+          <ChevronUp className="h-[14px] w-[14px]" aria-hidden />
         </button>
         <button
           type="button"
           onClick={onMoveDown}
           disabled={index === total - 1}
           aria-label="Move down"
-          className="flex h-5 w-5 items-center justify-center rounded text-neutral-400 hover:bg-neutral-100 hover:text-ink disabled:opacity-30"
+          className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-30"
         >
-          <ChevronDown className="h-3 w-3" aria-hidden />
+          <ChevronDown className="h-[14px] w-[14px]" aria-hidden />
         </button>
       </div>
 
@@ -328,11 +329,11 @@ function PatchRow({
         <img
           src={patch.imageUrl}
           alt={patch.name}
-          className="h-10 w-10 shrink-0 rounded-full object-cover"
+          className="h-[48px] w-[48px] shrink-0 rounded-full border border-gray-100 bg-gray-50 object-cover"
         />
       ) : (
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+          className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
           style={{ backgroundColor: patch.color }}
         >
           {patch.abbreviation}
@@ -340,30 +341,36 @@ function PatchRow({
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-ink">{patch.name}</p>
-        <p className="text-xs text-neutral-500">{formatPrice(Number(patch.price) || 0)}</p>
+        <p className="truncate text-[14px] font-semibold text-gray-900">{patch.name}</p>
+        <p className="text-[12px] text-gray-500">{formatPrice(Number(patch.price) || 0)}</p>
       </div>
 
-      <Badge variant={patch.isActive ? "outline" : "muted"} className="shrink-0">
+      {/* Flowbite badge */}
+      <span
+        className={cn(
+          "shrink-0 rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium",
+          patch.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800",
+        )}
+      >
         {patch.isActive ? "Active" : "Inactive"}
-      </Badge>
+      </span>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-[4px]">
         <button
           type="button"
           onClick={onEdit}
           aria-label="Edit patch"
-          className="flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 hover:bg-neutral-100 hover:text-ink"
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
         >
-          <Pencil className="h-3.5 w-3.5" aria-hidden />
+          <Pencil className="h-[16px] w-[16px]" aria-hidden />
         </button>
         <button
           type="button"
           onClick={onDelete}
           aria-label="Delete patch"
-          className="flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 hover:bg-red-50 hover:text-red-600"
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-red-100 hover:text-red-600"
         >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          <Trash2 className="h-[16px] w-[16px]" aria-hidden />
         </button>
       </div>
     </div>
@@ -474,7 +481,7 @@ function AssignmentEditor({
   };
 
   return (
-    <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-4">
+    <div className="rounded-[8px] border border-gray-200 bg-gray-50 p-[16px]">
       <p className="mb-4 text-sm font-semibold text-ink">
         {isNew ? "New assignment" : "Edit assignment"}
       </p>
@@ -495,7 +502,7 @@ function AssignmentEditor({
               className={cn(
                 "flex items-center gap-1.5 rounded-[3px] px-3 py-1.5 text-sm font-medium transition-colors",
                 draft.targetType === t
-                  ? "bg-ink text-paper"
+                  ? "bg-[#1A56DB] text-white"
                   : "text-neutral-500 hover:text-neutral-800",
               )}
             >
@@ -524,14 +531,14 @@ function AssignmentEditor({
               <img
                 src={draft.targetImage}
                 alt=""
-                className="h-8 w-8 shrink-0 rounded object-cover"
+                className="h-[32px] w-[32px] shrink-0 rounded object-cover"
               />
             ) : (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-neutral-100">
+              <div className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded bg-neutral-100">
                 {draft.targetType === "product" ? (
-                  <Package className="h-4 w-4 text-neutral-400" aria-hidden />
+                  <Package className="h-[16px] w-[16px] text-neutral-400" aria-hidden />
                 ) : (
-                  <FolderOpen className="h-4 w-4 text-neutral-400" aria-hidden />
+                  <FolderOpen className="h-[16px] w-[16px] text-neutral-400" aria-hidden />
                 )}
               </div>
             )}
@@ -542,7 +549,7 @@ function AssignmentEditor({
               aria-label="Change selection"
               className="text-xs text-neutral-400 hover:text-red-500"
             >
-              <X className="h-4 w-4" aria-hidden />
+              <X className="h-[16px] w-[16px]" aria-hidden />
             </button>
           </div>
         ) : (
@@ -612,7 +619,7 @@ function AssignmentEditor({
                           />
                         ) : (
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-neutral-100">
-                            <Package className="h-4 w-4 text-neutral-400" aria-hidden />
+                            <Package className="h-[16px] w-[16px] text-neutral-400" aria-hidden />
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
@@ -641,10 +648,10 @@ function AssignmentEditor({
                         <img
                           src={c.image}
                           alt=""
-                          className="h-7 w-7 shrink-0 rounded object-cover"
+                          className="h-[28px] w-[28px] shrink-0 rounded object-cover"
                         />
                       ) : (
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-neutral-100">
+                        <div className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded bg-neutral-100">
                           <FolderOpen className="h-3.5 w-3.5 text-neutral-400" aria-hidden />
                         </div>
                       )}
@@ -676,11 +683,11 @@ function AssignmentEditor({
                 <div
                   onClick={() => onChange({ ...draft, allPatches: true })}
                   className={cn(
-                    "flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors",
-                    draft.allPatches ? "border-ink bg-ink" : "border-neutral-300",
+                    "flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                    draft.allPatches ? "border-[#1A56DB] bg-[#1A56DB]" : "border-neutral-300",
                   )}
                 >
-                  {draft.allPatches ? <div className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
+                  {draft.allPatches ? <div className="h-[6px] w-[6px] rounded-full bg-white" /> : null}
                 </div>
                 <span className="select-none text-sm text-neutral-700">
                   All patches ({activePatchCount} active)
@@ -690,12 +697,12 @@ function AssignmentEditor({
                 <div
                   onClick={() => onChange({ ...draft, allPatches: false })}
                   className={cn(
-                    "flex h-4 w-4 items-center justify-center rounded-full border-2 transition-colors",
-                    !draft.allPatches ? "border-ink bg-ink" : "border-neutral-300",
+                    "flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                    !draft.allPatches ? "border-[#1A56DB] bg-[#1A56DB]" : "border-neutral-300",
                   )}
                 >
                   {!draft.allPatches ? (
-                    <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <div className="h-[6px] w-[6px] rounded-full bg-white" />
                   ) : null}
                 </div>
                 <span className="select-none text-sm text-neutral-700">Select specific</span>
@@ -712,7 +719,7 @@ function AssignmentEditor({
                       className={cn(
                         "flex cursor-pointer items-center gap-2.5 rounded-sm border px-3 py-2 transition-colors",
                         checked
-                          ? "border-ink/30 bg-ink/5"
+                          ? "border-[#1A56DB] bg-blue-50"
                           : "border-neutral-200 bg-white hover:bg-neutral-50",
                         !p.isActive && "opacity-50",
                       )}
@@ -720,22 +727,22 @@ function AssignmentEditor({
                       <div
                         onClick={() => togglePatchId(p._id)}
                         className={cn(
-                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors",
-                          checked ? "border-ink bg-ink text-paper" : "border-neutral-300 bg-paper",
+                          "flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[4px] border-2 transition-colors",
+                          checked ? "border-[#1A56DB] bg-[#1A56DB] text-white" : "border-neutral-300 bg-paper",
                         )}
                       >
-                        {checked ? <Check className="h-2.5 w-2.5" aria-hidden /> : null}
+                        {checked ? <Check className="h-[10px] w-[10px]" aria-hidden /> : null}
                       </div>
                       {p.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={p.imageUrl}
                           alt=""
-                          className="h-7 w-7 shrink-0 rounded-full object-cover"
+                          className="h-[28px] w-[28px] shrink-0 rounded-full object-cover"
                         />
                       ) : (
                         <div
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                          className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
                           style={{ backgroundColor: p.color }}
                         >
                           {p.abbreviation}
@@ -762,16 +769,16 @@ function AssignmentEditor({
         <p className="mb-1.5 text-xs font-medium text-neutral-500 uppercase tracking-wide">
           Personalisation options
         </p>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-[16px]">
           <label className="flex cursor-pointer items-center gap-2">
             <div
               onClick={() => onChange({ ...draft, allowName: !draft.allowName })}
               className={cn(
-                "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
-                draft.allowName ? "border-ink bg-ink text-paper" : "border-neutral-300 bg-paper",
+                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border-2 transition-colors",
+                draft.allowName ? "border-[#1A56DB] bg-[#1A56DB] text-white" : "border-neutral-300 bg-paper",
               )}
             >
-              {draft.allowName ? <Check className="h-3 w-3" aria-hidden /> : null}
+              {draft.allowName ? <Check className="h-[12px] w-[12px]" aria-hidden /> : null}
             </div>
             <span className="select-none text-sm text-neutral-700">Name on back</span>
           </label>
@@ -779,13 +786,13 @@ function AssignmentEditor({
             <div
               onClick={() => onChange({ ...draft, allowNumber: !draft.allowNumber })}
               className={cn(
-                "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
+                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] border-2 transition-colors",
                 draft.allowNumber
-                  ? "border-ink bg-ink text-paper"
+                  ? "border-[#1A56DB] bg-[#1A56DB] text-white"
                   : "border-neutral-300 bg-paper",
               )}
             >
-              {draft.allowNumber ? <Check className="h-3 w-3" aria-hidden /> : null}
+              {draft.allowNumber ? <Check className="h-[12px] w-[12px]" aria-hidden /> : null}
             </div>
             <span className="select-none text-sm text-neutral-700">Squad number</span>
           </label>
@@ -832,37 +839,35 @@ function AssignmentRow({
   }, [assignment, patches]);
 
   return (
-    <div className="flex items-center gap-3 rounded-sm border border-neutral-200 bg-paper px-4 py-3">
+    <div className="flex items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white px-[16px] py-[12px]">
       {/* Thumbnail */}
       {assignment.targetImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={assignment.targetImage}
           alt=""
-          className="h-10 w-10 shrink-0 rounded object-cover"
+          className="h-[48px] w-[48px] shrink-0 rounded-[8px] border border-gray-100 bg-gray-50 object-cover"
         />
       ) : (
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-neutral-100">
+        <div className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[8px] bg-gray-100">
           {assignment.targetType === "product" ? (
-            <Package className="h-5 w-5 text-neutral-400" aria-hidden />
+            <Package className="h-[20px] w-[20px] text-gray-400" aria-hidden />
           ) : (
-            <FolderOpen className="h-5 w-5 text-neutral-400" aria-hidden />
+            <FolderOpen className="h-[20px] w-[20px] text-gray-400" aria-hidden />
           )}
         </div>
       )}
 
       {/* Info */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-semibold text-ink">{assignment.targetLabel}</p>
-          <Badge
-            variant="muted"
-            className="shrink-0 text-[10px] capitalize"
-          >
+        <div className="flex items-center gap-[8px]">
+          <p className="truncate text-[14px] font-semibold text-gray-900">{assignment.targetLabel}</p>
+          {/* Flowbite badge */}
+          <span className="shrink-0 rounded-[4px] bg-blue-100 px-[10px] py-[2px] text-[12px] font-medium capitalize text-blue-800">
             {assignment.targetType}
-          </Badge>
+          </span>
         </div>
-        <p className="mt-0.5 text-xs text-neutral-500">
+        <p className="mt-[2px] text-[12px] text-gray-500">
           {patchSummary}
           {assignment.allowName ? " · Name" : ""}
           {assignment.allowNumber ? " · Number" : ""}
@@ -870,22 +875,22 @@ function AssignmentRow({
       </div>
 
       {/* Actions */}
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-[4px]">
         <button
           type="button"
           onClick={onEdit}
           aria-label="Edit assignment"
-          className="flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 hover:bg-neutral-100 hover:text-ink"
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
         >
-          <Pencil className="h-3.5 w-3.5" aria-hidden />
+          <Pencil className="h-[16px] w-[16px]" aria-hidden />
         </button>
         <button
           type="button"
           onClick={onDelete}
           aria-label="Delete assignment"
-          className="flex h-7 w-7 items-center justify-center rounded-sm text-neutral-400 hover:bg-red-50 hover:text-red-600"
+          className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-gray-400 transition duration-75 hover:bg-red-100 hover:text-red-600"
         >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          <Trash2 className="h-[16px] w-[16px]" aria-hidden />
         </button>
       </div>
     </div>
@@ -1084,11 +1089,7 @@ export function CustomizationsClient() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-48 items-center justify-center">
-        <Spinner />
-      </div>
-    );
+    return <AdminFormSkeleton sections={3} sidebarCards={1} />;
   }
 
   return (
@@ -1097,21 +1098,21 @@ export function CustomizationsClient() {
         e.preventDefault();
         onSave();
       }}
-      className="mx-auto max-w-3xl space-y-6 pb-10"
+      className="mx-auto max-w-3xl space-y-[16px] pb-[32px]"
     >
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-ink">Customizations</h1>
-        <p className="mt-0.5 text-sm text-neutral-500">
+        <h1 className="text-[20px] font-bold leading-tight text-gray-900 sm:text-[24px]">Customizations</h1>
+        <p className="mt-[4px] text-[13px] text-gray-500 sm:text-[14px]">
           Assign patches and personalisation options to specific products or categories.
         </p>
       </div>
 
       {/* ── Section: Add-on prices ── */}
-      <div className="rounded-sm border border-neutral-200 bg-paper p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Tag className="h-4 w-4 text-neutral-400" aria-hidden />
-          <h2 className="text-sm font-semibold text-ink">Personalisation price</h2>
+      <div className="rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+        <div className="mb-[16px] flex items-center gap-[8px]">
+          <Tag className="h-[16px] w-[16px] text-neutral-400" aria-hidden />
+          <h2 className="text-[18px] font-semibold text-gray-900">Personalisation price</h2>
         </div>
         <div className="flex flex-col gap-1 max-w-xs">
           <Label htmlFor="price-blended">Name + Number (BDT)</Label>
@@ -1132,12 +1133,16 @@ export function CustomizationsClient() {
       </div>
 
       {/* ── Section: Patch library ── */}
-      <div className="rounded-sm border border-neutral-200 bg-paper p-5">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+        <div className="mb-[16px] flex flex-wrap items-center justify-between gap-[8px]">
           <div className="flex items-center gap-2">
-            <Palette className="h-4 w-4 text-neutral-400" aria-hidden />
-            <h2 className="text-sm font-semibold text-ink">Patch library</h2>
-            {patches.length > 0 ? <Badge variant="muted">{patches.length}</Badge> : null}
+            <Palette className="h-[16px] w-[16px] text-neutral-400" aria-hidden />
+            <h2 className="text-[18px] font-semibold text-gray-900">Patch library</h2>
+            {patches.length > 0 ? (
+              <span className="rounded-full bg-gray-100 px-[10px] py-[2px] text-[12px] font-medium text-gray-800">
+                {patches.length}
+              </span>
+            ) : null}
           </div>
           {!addingPatch ? (
             <Button
@@ -1156,8 +1161,8 @@ export function CustomizationsClient() {
         </div>
 
         {patches.length === 0 && !addingPatch ? (
-          <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-neutral-200 py-10 text-center">
-            <Palette className="h-8 w-8 text-neutral-300" aria-hidden />
+          <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-gray-300 py-10 text-center">
+            <Palette className="h-[32px] w-[32px] text-neutral-300" aria-hidden />
             <p className="text-sm font-medium text-neutral-500">No patches yet</p>
             <p className="text-xs text-neutral-400">
               Add club crests, league badges, or any patch customers can add to their jersey.
@@ -1223,13 +1228,15 @@ export function CustomizationsClient() {
       </div>
 
       {/* ── Section: Assignments ── */}
-      <div className="rounded-sm border border-neutral-200 bg-paper p-5">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+        <div className="mb-[16px] flex flex-wrap items-center justify-between gap-[8px]">
           <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-neutral-400" aria-hidden />
-            <h2 className="text-sm font-semibold text-ink">Customisation assignments</h2>
+            <Package className="h-[16px] w-[16px] text-neutral-400" aria-hidden />
+            <h2 className="text-[18px] font-semibold text-gray-900">Customisation assignments</h2>
             {assignments.length > 0 ? (
-              <Badge variant="muted">{assignments.length}</Badge>
+              <span className="rounded-full bg-gray-100 px-[10px] py-[2px] text-[12px] font-medium text-gray-800">
+                {assignments.length}
+              </span>
             ) : null}
           </div>
           {!addingAssignment ? (
@@ -1249,8 +1256,8 @@ export function CustomizationsClient() {
         </div>
 
         {assignments.length === 0 && !addingAssignment ? (
-          <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-neutral-200 py-10 text-center">
-            <Package className="h-8 w-8 text-neutral-300" aria-hidden />
+          <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-gray-300 py-10 text-center">
+            <Package className="h-[32px] w-[32px] text-neutral-300" aria-hidden />
             <p className="text-sm font-medium text-neutral-500">No assignments yet</p>
             <p className="max-w-xs text-xs text-neutral-400">
               Assign the customisation panel to specific products or whole categories. Each

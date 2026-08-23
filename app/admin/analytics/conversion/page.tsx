@@ -46,7 +46,7 @@ export default function ConversionPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       <ReportHeader
         title="Conversion tracking"
         description="Funnel dropoff, cart abandonment, and conversion by device and channel."
@@ -87,7 +87,7 @@ export default function ConversionPage() {
               <TrendChart points={cvrTrend} label="Daily CVR (%)" />
             </Panel>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2">
               <Panel title="By device">
                 <MiniTable
                   columns={deviceCols}

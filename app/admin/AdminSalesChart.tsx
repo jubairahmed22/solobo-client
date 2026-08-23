@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, BarChart3 } from "lucide-react";
-import { Button, Spinner } from "@/components/ui";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, BarChart3 } from "lucide-react";
+import { Button } from "@/components/ui";
+import { Skeleton } from "@/components/admin/Skeleton";
 import { SalesChartSvg } from "@/components/composed/SalesChartSvg";
 import { useAdminTimeseries } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
@@ -64,7 +66,7 @@ function WindowToggle({
     <div
       role="tablist"
       aria-label="Time window"
-      className="inline-flex overflow-hidden rounded-sm border border-neutral-200 bg-paper"
+      className="inline-flex overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm"
     >
       {WINDOWS.map((w) => {
         const active = current === w.days;
@@ -77,10 +79,10 @@ function WindowToggle({
             disabled={disabled}
             onClick={() => onChange(w.days)}
             className={cn(
-              "px-1.5 py-0.5 text-xs font-medium transition-colors",
+              "border-l border-gray-200 px-[12px] py-[6px] text-[13px] font-medium transition duration-75 first:border-l-0",
               active
-                ? "bg-ink text-paper"
-                : "text-neutral-700 hover:bg-neutral-100",
+                ? "bg-gray-100 text-gray-900"
+                : "bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900",
               disabled && "cursor-not-allowed opacity-60",
             )}
           >
@@ -109,34 +111,29 @@ export function AdminSalesChart({
 
   return (
     <section>
-      <header className="flex flex-wrap items-end justify-between gap-2 pb-4">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-sm font-semibold text-ink">
-            {sellerId ? "Seller sales" : "Platform sales"}
-          </h2>
+      {/* Flowbite chart-card header - hero number, muted context line,
+          window toggle on the right. */}
+      <header className="flex flex-wrap items-start justify-between gap-[16px] pb-[16px]">
+        <div className="min-w-0">
           {totals ? (
-            <p className="text-xs text-neutral-600">
-              <span className="tabular-nums text-ink">
-                {formatMoney(totals.revenue, currency)}
-              </span>
-              <span className="mx-0.5 text-neutral-400">·</span>
-              <span className="tabular-nums">
-                {totals.orderCount.toLocaleString("en-US")}{" "}
-                {totals.orderCount === 1 ? "order" : "orders"}
-              </span>
-              <span className="mx-0.5 text-neutral-400">·</span>
-              <span className="tabular-nums">
-                {totals.unitCount.toLocaleString("en-US")}{" "}
-                {totals.unitCount === 1 ? "unit" : "units"}
-              </span>
-              <span className="ml-0.5 text-neutral-500">
-                {" "}
-                in the last {days} days
-              </span>
+            <p className="text-[24px] font-bold leading-none tabular-nums text-gray-900">
+              {formatMoney(totals.revenue, currency)}
             </p>
           ) : (
-            <p className="text-xs text-neutral-500">
-              Daily revenue and order count across the platform.
+            <h2 className="text-[24px] font-bold leading-none text-gray-900">
+              {sellerId ? "Seller sales" : "Platform sales"}
+            </h2>
+          )}
+          <p className="mt-[8px] text-[14px] font-normal text-gray-500">
+            {sellerId ? "Seller sales" : "Sales"} in the last {days} days
+          </p>
+          {totals && (
+            <p className="mt-[4px] text-[13px] tabular-nums text-gray-500">
+              {totals.orderCount.toLocaleString("en-US")}{" "}
+              {totals.orderCount === 1 ? "order" : "orders"}
+              <span className="mx-[4px] text-gray-400">·</span>
+              {totals.unitCount.toLocaleString("en-US")}{" "}
+              {totals.unitCount === 1 ? "unit" : "units"}
             </p>
           )}
         </div>
@@ -144,13 +141,16 @@ export function AdminSalesChart({
       </header>
 
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Spinner />
+        <div className="mt-[16px] flex h-48 items-end gap-[6px]" role="status" aria-label="Loading chart" aria-busy>
+          {Array.from({ length: 24 }).map((_, i) => (
+            <Skeleton key={i} className="flex-1 rounded-t" style={{ height: `${30 + ((i * 37) % 65)}%` }} />
+          ))}
+          <span className="sr-only">Loading chart</span>
         </div>
       ) : isError || !data ? (
-        <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-neutral-200 py-8 text-center">
-          <AlertTriangle className="h-5 w-5 text-neutral-300" aria-hidden />
-          <p className="text-sm text-neutral-600">
+        <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 py-[32px] text-center">
+          <AlertTriangle className="h-[20px] w-[20px] text-gray-400" aria-hidden />
+          <p className="text-[14px] text-gray-500">
             {error instanceof AdminError
               ? error.message
               : "Couldn't load the sales chart."}
@@ -160,12 +160,12 @@ export function AdminSalesChart({
           </Button>
         </div>
       ) : isEmpty ? (
-        <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-neutral-200 py-8 text-center">
-          <BarChart3 className="h-5 w-5 text-neutral-200" aria-hidden />
-          <p className="text-sm font-medium text-neutral-600">
+        <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 py-[32px] text-center">
+          <BarChart3 className="h-[20px] w-[20px] text-gray-300" aria-hidden />
+          <p className="text-[14px] font-medium text-gray-600">
             No sales in this window yet.
           </p>
-          <p className="max-w-sm text-xs text-neutral-400">
+          <p className="max-w-sm text-[12px] text-gray-400">
             {sellerId
               ? "This seller hasn't had any non-cancelled orders in the selected window."
               : "Once orders start landing across the platform, they'll show up here. Try widening the window."}
@@ -176,6 +176,17 @@ export function AdminSalesChart({
           <SalesChartSvg series={series} windowDays={days} />
         </div>
       )}
+
+      {/* Flowbite chart-card footer - report link behind a top border */}
+      <div className="mt-[16px] flex items-center justify-end border-t border-gray-200 pt-[8px]">
+        <Link
+          href="/admin/analytics/financial"
+          className="inline-flex items-center gap-[8px] rounded-[8px] px-[12px] py-[8px] text-[12px] font-semibold uppercase tracking-wide text-[#1A56DB] transition duration-75 hover:bg-gray-100"
+        >
+          Sales report
+          <ArrowRight className="h-[16px] w-[16px]" aria-hidden />
+        </Link>
+      </div>
     </section>
   );
 }

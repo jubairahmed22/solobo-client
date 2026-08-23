@@ -16,6 +16,7 @@ import type {
   AdminCategoryPatch,
   AdminCategorySummary,
   AdminCreatePosOrderInput,
+  AdminInventoryStats,
   AdminListAuditEventsParams,
   AdminListAuditEventsResponse,
   AdminListBrandsParams,
@@ -32,6 +33,10 @@ import type {
   AdminOrderDetail,
   AdminPatchOrderCustomerInput,
   AdminBulkApplySizeChartBody,
+  CourierDispatchResult,
+  PathaoArea,
+  PathaoCity,
+  PathaoZone,
   AdminProductCreate,
   AdminProductDetail,
   AdminProductPatch,
@@ -64,6 +69,11 @@ import type {
   AdminListQuestionsResponse,
 } from "@/types/questions";
 import type { SiteSettings, SiteSettingsWhatsApp, UpdateSiteSettingsBody } from "@/types/siteSettings";
+import type {
+  AdminChatSessionDetail,
+  AdminChatSessionSummary,
+  AdminListChatSessionsParams,
+} from "@/types/chat";
 
 export class AdminError extends Error {
   code: string;
@@ -227,6 +237,46 @@ export const adminApi = {
       apiClient.patch(`/admin/orders/${id}/customer`, body),
     ),
 
+  /* Manual delivery-charge edit - 0 removes the charge, any other value
+   * replaces the auto-calculated one. Total recomputed server-side. */
+  updateOrderShipping: (id: string, shippingCost: number) =>
+    unwrap<AdminOrderDetail>(
+      apiClient.patch(`/admin/orders/${id}/shipping`, { shippingCost }),
+    ),
+
+  /* ── Pathao courier ──
+   * Location lookups are 24h-cached server-side (pathao.service.ts), so
+   * polling these on every order-detail visit is cheap. Dispatch/refresh
+   * reuse the same /orders/:id endpoints the auto-dispatch path calls -
+   * `unwrap` surfaces a thrown 422 (missing config/location) as an
+   * AdminError with the exact server reason, same as every other mutation
+   * here.
+   */
+  getCourierCities: () =>
+    unwrap<PathaoCity[]>(apiClient.get("/admin/delivery/cities")),
+
+  /** Best-effort city match from a shipping address's free-text district/city -
+   * admin convenience only. Zone/area are never guessed (see courier.service.ts's
+   * `resolveLocationByName` docs) - a wrong zone/area would ship to the wrong place. */
+  matchCourierLocation: (params: { district?: string; city?: string }) =>
+    unwrap<PathaoCity | null>(apiClient.get("/admin/delivery/locations/match", { params })),
+
+  getCourierZones: (cityId: number) =>
+    unwrap<PathaoZone[]>(apiClient.get(`/admin/delivery/cities/${cityId}/zones`)),
+
+  getCourierAreas: (zoneId: number) =>
+    unwrap<PathaoArea[]>(apiClient.get(`/admin/delivery/zones/${zoneId}/areas`)),
+
+  dispatchCourierOrder: (id: string) =>
+    unwrap<CourierDispatchResult>(
+      apiClient.post(`/admin/delivery/orders/${id}/dispatch`),
+    ),
+
+  refreshCourierOrder: (id: string) =>
+    unwrap<CourierDispatchResult>(
+      apiClient.post(`/admin/delivery/orders/${id}/refresh`),
+    ),
+
   /* Hard-delete an order. Irreversible - the backend restores stock for
    * still-live orders (cancelled/returned already had it returned) and logs
    * the delete to the audit trail. */
@@ -268,6 +318,10 @@ export const adminApi = {
         params: { ...params, idsOnly: 1, page: undefined, limit: undefined },
       }),
     ),
+
+  /** The products page's 4-card KPI strip - see {@link AdminInventoryStats}. */
+  getInventoryStats: () =>
+    unwrap<AdminInventoryStats>(apiClient.get("/admin/products/inventory-stats")),
 
   getProduct: (id: string) =>
     unwrap<AdminProductDetail>(apiClient.get(`/admin/products/${id}`)),
@@ -500,4 +554,13 @@ export const adminApi = {
 
   updateCustomizationConfig: (body: UpdateCustomizationConfigBody) =>
     unwrap<CustomizationConfig>(apiClient.put("/admin/customizations", body)),
+
+  /* ── AI chat assistant transcripts ── */
+  listChatSessions: (params: AdminListChatSessionsParams = {}) =>
+    unwrapWithMeta<AdminChatSessionSummary[]>(
+      apiClient.get("/admin/chat-sessions", { params }),
+    ),
+
+  getChatSession: (id: string) =>
+    unwrap<AdminChatSessionDetail>(apiClient.get(`/admin/chat-sessions/${id}`)),
 };

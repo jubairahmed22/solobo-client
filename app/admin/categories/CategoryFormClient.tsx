@@ -16,7 +16,8 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
-import { Button, Input, Label, Spinner } from "@/components/ui";
+import { Button, Input, Label } from "@/components/ui";
+import { AdminFormSkeleton } from "@/components/admin/Skeleton";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
 import { ImageUploader } from "@/components/composed/ImageUploader";
 import {
@@ -110,18 +111,14 @@ export function CategoryFormClient({ mode, id }: CategoryFormClientProps) {
   } = useAdminCategory(mode === "edit" ? id : undefined);
 
   if (mode === "edit" && isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper">
-        <Spinner />
-      </div>
-    );
+    return <AdminFormSkeleton sections={2} sidebarCards={2} />;
   }
 
   if (mode === "edit" && (isError || !category)) {
     const message =
       error instanceof AdminError ? error.message : "Could not load category.";
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
+      <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
         <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
         <p className="text-sm text-neutral-500">{message}</p>
         <div className="flex items-center gap-2">
@@ -303,18 +300,18 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
   const submitting = create.isPending || update.isPending;
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
 
       {/* ── Header ── */}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1.5">
           <Link
             href="/admin/categories"
-            className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-ink"
+            className="inline-flex items-center gap-[6px] text-[14px] font-medium text-gray-500 transition duration-75 hover:text-[#1A56DB]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to categories
+            <ArrowLeft className="h-[16px] w-[16px]" aria-hidden /> Back to categories
           </Link>
-          <h1 className="text-2xl font-semibold text-ink">{heading}</h1>
+          <h1 className="text-[24px] font-bold leading-tight text-gray-900">{heading}</h1>
           <p className="text-sm text-neutral-500">
             {category
               ? `/${category.path} · Updated ${new Date(category.updatedAt).toLocaleDateString()}`
@@ -330,53 +327,52 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
               href={`/category/${category.path}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-ink hover:text-ink"
+              className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[16px] text-[14px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
             >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden /> Preview
+              <ExternalLink className="h-[16px] w-[16px]" aria-hidden /> Preview
             </Link>
           ) : null}
           {mode === "edit" && category ? (
-            <Button
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={onDelete}
               disabled={remove.isPending || submitting}
+              className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[16px] text-[14px] font-medium text-red-600 transition duration-75 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {remove.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
               ) : (
-                <Trash2 className="h-4 w-4" aria-hidden />
+                <Trash2 className="h-[16px] w-[16px]" aria-hidden />
               )}
-              <span className="ml-1.5">Delete</span>
-            </Button>
+              Delete
+            </button>
           ) : null}
-          <Button
+          <button
             type="submit"
-            size="sm"
             disabled={(mode === "edit" && !anyDirty) || submitting}
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
             ) : mode === "create" ? (
-              <Plus className="h-4 w-4" aria-hidden />
+              <Plus className="h-[16px] w-[16px]" aria-hidden />
             ) : (
-              <Save className="h-4 w-4" aria-hidden />
+              <Save className="h-[16px] w-[16px]" aria-hidden />
             )}
-            <span className="ml-1.5">{mode === "create" ? "Create" : "Save"}</span>
-          </Button>
+            {mode === "create" ? "Create" : "Save changes"}
+          </button>
         </div>
       </header>
 
       {/* ── Body ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[1fr_320px]">
 
         {/* Main column */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[16px]">
 
           {/* Basics */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Basics</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Basics</h2>
             <Field label="Name" error={errors.name?.message}>
               <Input invalid={!!errors.name} {...register("name")} />
             </Field>
@@ -397,10 +393,10 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
           </section>
 
           {/* Hierarchy */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex items-center gap-2">
               <FolderTree className="h-4 w-4 text-neutral-400" aria-hidden />
-              <h2 className="text-base font-semibold text-ink">Hierarchy</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">Hierarchy</h2>
             </div>
             <Field
               label="Parent category"
@@ -432,8 +428,8 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
           </section>
 
           {/* Appearance */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Appearance</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Appearance</h2>
             <Controller
               control={control}
               name="image"
@@ -453,7 +449,7 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
                       onChange={(next) => field.onChange(next[0]?.url ?? "")}
                     />
                     {errors.image?.message ? (
-                      <span className="text-xs text-ink">{errors.image.message}</span>
+                      <span className="text-[13px] font-medium text-red-600">{errors.image.message}</span>
                     ) : null}
                   </div>
                 );
@@ -469,9 +465,9 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
           </section>
 
           {/* Default size chart */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-ink">Default size chart</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">Default size chart</h2>
               {sizeChart ? (
                 <span className="text-xs text-neutral-400">
                   {sizeChart.rows.length} sizes &middot; {sizeChart.columns.length} measurements
@@ -486,8 +482,8 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
           </section>
 
           {/* SEO */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">SEO</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">SEO</h2>
             <Field
               label="Meta title"
               error={errors.metaTitle?.message}
@@ -513,11 +509,11 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
         </div>
 
         {/* Sidebar */}
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-[16px]">
 
           {/* Visibility */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Visibility</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Visibility</h2>
             <CheckboxField
               label="Active"
               hint="Hidden categories are excluded from the storefront nav and product filters."
@@ -527,8 +523,8 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
 
           {/* Category meta */}
           {category ? (
-            <section className="flex flex-col gap-2 rounded-sm border border-neutral-200 bg-paper p-3 text-xs text-neutral-500">
-              <h2 className="text-sm font-semibold text-ink">Info</h2>
+            <section className="flex flex-col gap-2 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm text-xs text-neutral-500">
+              <h2 className="text-[18px] font-semibold text-gray-900">Info</h2>
               <div className="flex items-center justify-between">
                 <span>Depth</span>
                 <span className="tabular-nums text-ink">{category.ancestors.length}</span>
@@ -550,7 +546,7 @@ function CategoryForm({ mode, category }: CategoryFormProps) {
 
           {/* Create tips */}
           {mode === "create" ? (
-            <section className="flex flex-col gap-2 rounded-sm border border-dashed border-neutral-200 bg-paper p-3">
+            <section className="flex flex-col gap-2 rounded-sm border border-dashed border-gray-300 bg-paper p-3">
               <p className="text-sm font-medium text-neutral-700">Tips</p>
               <ul className="flex flex-col gap-1 text-xs text-neutral-500">
                 <li>After creating, hover any row in the categories list to add a subcategory.</li>
@@ -591,10 +587,10 @@ interface FieldProps {
 function Field({ label, hint, error, children }: FieldProps) {
   return (
     <Label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+      <span className="text-[14px] font-medium text-gray-900">{label}</span>
       {children}
       {error ? (
-        <span className="text-xs text-ink">{error}</span>
+        <span className="text-[13px] font-medium text-red-600">{error}</span>
       ) : hint ? (
         <span className="text-xs text-neutral-400">{hint}</span>
       ) : null}

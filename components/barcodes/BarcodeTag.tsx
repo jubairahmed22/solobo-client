@@ -3,19 +3,29 @@
 import * as React from "react";
 import { Copy, Download, Printer, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import type { BarcodeFormat } from "@/lib/barcode";
+import { renderSymbology } from "@/lib/labels/engine";
+import type { Symbology } from "@/lib/labels/types";
 
 export interface BarcodeTagProps {
   /** The value to encode */
   value: string;
-  format?: BarcodeFormat;
+  format?: Symbology;
   /** Display label below the barcode (defaults to value) */
   label?: string;
   /** Size in px of the rendered barcode element */
   width?: number;
   height?: number;
+  /** EAN13/UPCA/EAN8 only - 80-200. */
+  magnificationPct?: number;
+  /** QR only. */
+  eclevel?: "L" | "M" | "Q" | "H";
   showActions?: boolean;
   className?: string;
+}
+
+/** Strip the engine's explicit mm width/height for on-screen preview - the container's CSS width + the SVG's own viewBox drive the visual size instead, so the same markup scales cleanly at any preview size. Print/export paths use the full (unstripped) SVG from renderSymbology directly. */
+function stripExplicitSize(svg: string): string {
+  return svg.replace(/\swidth="[^"]*"/, "").replace(/\sheight="[^"]*"/, "");
 }
 
 export function BarcodeTag({
@@ -24,54 +34,43 @@ export function BarcodeTag({
   label,
   width = 200,
   height = 70,
+  magnificationPct,
+  eclevel,
   showActions = true,
   className,
 }: BarcodeTagProps) {
-  const svgRef = React.useRef<SVGSVGElement>(null);
-  const [qrUrl, setQrUrl] = React.useState<string>("");
+  const [svg, setSvg] = React.useState<string>("");
   const [error, setError] = React.useState<string>("");
   const [copied, setCopied] = React.useState(false);
 
-  const isQr = format === "QR";
-
-  // Render linear barcode
   React.useEffect(() => {
-    if (isQr || !svgRef.current || !value) return;
+    if (!value) {
+      setSvg("");
+      setError("");
+      return;
+    }
     let cancelled = false;
-    import("jsbarcode").then(({ default: JsBarcode }) => {
-      if (cancelled || !svgRef.current) return;
-      try {
-        JsBarcode(svgRef.current, value, {
-          format: format === "UPCA" ? "UPC" : format,
-          width: 1.5,
-          height,
-          displayValue: true,
-          fontSize: 11,
-          margin: 6,
-          background: "#ffffff",
-          lineColor: "#0A0A0A",
-          textMargin: 3,
-        });
+    renderSymbology({
+      value,
+      symbology: format,
+      heightMM: format === "QR" || format === "DATAMATRIX" ? undefined : height / 3.78, // px -> mm @ 96dpi, only used as a fallback default for non-magnified symbologies
+      magnificationPct,
+      eclevel,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setSvg(result.svg);
         setError("");
-      } catch {
-        setError("Invalid barcode value for format");
-      }
-    });
-    return () => { cancelled = true; };
-  }, [value, format, height, isQr]);
-
-  // Render QR code
-  React.useEffect(() => {
-    if (!isQr || !value) return;
-    let cancelled = false;
-    import("qrcode").then((QRCode) => {
-      if (cancelled) return;
-      QRCode.toDataURL(value, { width, margin: 1, errorCorrectionLevel: "M" })
-        .then((url) => { if (!cancelled) { setQrUrl(url); setError(""); } })
-        .catch(() => { if (!cancelled) setError("Failed to generate QR code"); });
-    });
-    return () => { cancelled = true; };
-  }, [value, isQr, width]);
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setSvg("");
+        setError(err.message || "Invalid barcode value for format");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [value, format, height, magnificationPct, eclevel]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(value).catch(() => {});
@@ -80,16 +79,8 @@ export function BarcodeTag({
   };
 
   const handleDownload = () => {
-    if (isQr && qrUrl) {
-      const a = document.createElement("a");
-      a.href = qrUrl;
-      a.download = `${value}.png`;
-      a.click();
-      return;
-    }
-    if (!svgRef.current) return;
-    const xml = new XMLSerializer().serializeToString(svgRef.current);
-    const blob = new Blob([xml], { type: "image/svg+xml" });
+    if (!svg) return;
+    const blob = new Blob([svg], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -99,40 +90,42 @@ export function BarcodeTag({
   };
 
   const handlePrint = () => {
+    if (!svg) return;
     const win = window.open("", "_blank", "width=400,height=300");
     if (!win) return;
-    if (isQr && qrUrl) {
-      win.document.write(`<html><body style="text-align:center;font-family:Arial"><img src="${qrUrl}" /><p>${label ?? value}</p></body></html>`);
-    } else if (svgRef.current) {
-      const xml = new XMLSerializer().serializeToString(svgRef.current);
-      win.document.write(`<html><body style="text-align:center;font-family:Arial">${xml}</body></html>`);
-    }
+    win.document.write(`<html><body style="text-align:center;font-family:Arial">${svg}<p>${label ?? value}</p></body></html>`);
     win.document.close();
     win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 400);
+    setTimeout(() => {
+      win.print();
+      win.close();
+    }, 400);
   };
 
   return (
-    <div className={cn("inline-flex flex-col items-center gap-1.5", className)}>
-      <div className="rounded-lg border border-neutral-200 bg-white p-2">
+    <div className={cn("inline-flex max-w-full flex-col items-center gap-1.5", className)}>
+      <div className="max-w-full rounded-lg border border-neutral-200 bg-white p-2">
         {error ? (
-          <div className="flex h-[70px] w-[200px] items-center justify-center rounded bg-neutral-50 text-xs text-neutral-500">
+          <div
+            className="flex w-full max-w-[200px] items-center justify-center rounded bg-neutral-50 text-xs text-neutral-500"
+            style={{ height }}
+          >
             {error}
           </div>
-        ) : isQr ? (
-          qrUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrUrl} alt={label ?? value} width={width} height={width} className="block" />
-          ) : (
-            <div className="h-[200px] w-[200px] animate-pulse rounded bg-neutral-100" />
-          )
+        ) : svg ? (
+          <div
+            style={{ width }}
+            className="block h-auto max-w-full [&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
+            aria-label={label ?? value}
+            dangerouslySetInnerHTML={{ __html: stripExplicitSize(svg) }}
+          />
         ) : (
-          <svg ref={svgRef} aria-label={label ?? value} />
+          <div className="aspect-square max-w-full animate-pulse rounded bg-neutral-100" style={{ width }} />
         )}
       </div>
 
-      {(label !== undefined || !isQr) && (
-        <span className="max-w-[200px] truncate text-center text-[10px] font-mono text-neutral-600">
+      {(label !== undefined || format !== "QR") && (
+        <span className="max-w-full truncate text-center text-[10px] font-mono text-neutral-600">
           {label ?? value}
         </span>
       )}
@@ -142,7 +135,7 @@ export function BarcodeTag({
           <ActionBtn onClick={handleCopy} label={copied ? "Copied!" : "Copy value"}>
             {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
           </ActionBtn>
-          <ActionBtn onClick={handleDownload} label="Download">
+          <ActionBtn onClick={handleDownload} label="Download SVG">
             <Download className="h-3 w-3" />
           </ActionBtn>
           <ActionBtn onClick={handlePrint} label="Print">

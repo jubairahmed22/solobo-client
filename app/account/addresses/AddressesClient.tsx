@@ -26,7 +26,6 @@ const formSchema = z.object({
   altPhone: z.string().max(20).optional().or(z.literal("")),
   line1: z.string().min(3, "Address is required").max(200),
   line2: z.string().max(200).optional().or(z.literal("")),
-  city: z.string().min(1, "City is required").max(80),
   district: z.string().min(1, "District is required").max(80),
   division: z.string().max(80).optional().or(z.literal("")),
   postalCode: z.string().max(20).optional().or(z.literal("")),
@@ -41,7 +40,6 @@ const EMPTY: FormValues = {
   altPhone: "",
   line1: "",
   line2: "",
-  city: "",
   district: "",
   division: "",
   postalCode: "",
@@ -56,7 +54,6 @@ function addressToForm(a: Address): FormValues {
     altPhone: a.altPhone ?? "",
     line1: a.line1,
     line2: a.line2 ?? "",
-    city: a.city,
     district: a.district,
     division: a.division ?? "",
     postalCode: a.postalCode ?? "",
@@ -72,7 +69,6 @@ function formToInput(v: FormValues): AddressInput {
     altPhone: v.altPhone || undefined,
     line1: v.line1,
     line2: v.line2 || undefined,
-    city: v.city,
     district: v.district,
     division: v.division || undefined,
     postalCode: v.postalCode || undefined,
@@ -338,13 +334,6 @@ function AddressForm({ title, defaults, submitting, onCancel, onSubmit }: Addres
             autoComplete="address-line2"
             {...register("line2")}
             invalid={!!errors.line2}
-          />
-        </Field>
-        <Field label="City" error={errors.city?.message} required>
-          <Input
-            autoComplete="address-level2"
-            {...register("city")}
-            invalid={!!errors.city}
           />
         </Field>
         <Field label="District" error={errors.district?.message} required>

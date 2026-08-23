@@ -14,8 +14,10 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { Badge, Button, Input, Spinner } from "@/components/ui";
+import { Badge, Button, Input } from "@/components/ui";
+import { AdminInlineSkeleton, AdminProductGridSkeleton } from "@/components/admin/Skeleton";
 import { Select } from "@/components/composed";
+import { AdminTabs } from "@/components/admin/AdminTabs";
 import { cn } from "@/lib/utils/cn";
 import { useAdminProducts } from "@/hooks/useAdmin";
 import { useUsbScanner } from "@/hooks/useUsbScanner";
@@ -30,6 +32,7 @@ import {
   type LabelData,
   type LabelSize,
 } from "@/lib/barcode";
+import type { Symbology } from "@/lib/labels/types";
 import type { AdminProductSort } from "@/types/admin";
 
 /* -- Tabs -- */
@@ -68,45 +71,46 @@ export function BarcodeHubClient() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-col gap-[16px]">
+      <header className="flex flex-col gap-[12px] sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Barcodes</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-[20px] font-bold leading-tight text-gray-900 sm:text-[24px]">Barcodes</h1>
+          <p className="mt-[4px] text-[14px] text-gray-500">
             Generate, print, and scan barcodes for products and variants.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="muted">
-            <ScanLine className="mr-1.5 inline h-3.5 w-3.5" aria-hidden />
+        <div className="flex flex-wrap items-center gap-[8px]">
+          <span className="inline-flex items-center gap-[6px] rounded-[6px] bg-gray-100 px-[10px] py-[4px] text-[12px] font-medium text-gray-800">
+            <ScanLine className="h-[14px] w-[14px]" aria-hidden />
             USB scanner active
-          </Badge>
-          <Button size="sm" variant="secondary" onClick={() => setScannerOpen(true)}>
-            <Camera className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+          </span>
+          {/* Flowbite "alternative" button */}
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[16px] text-[14px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
+          >
+            <Camera className="h-[16px] w-[16px]" aria-hidden />
             Camera scan
-          </Button>
+          </button>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-sm border border-neutral-200 bg-paper p-1">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setActiveTab(id)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
-              activeTab === id
-                ? "bg-ink text-paper shadow-sm"
-                : "text-neutral-600 hover:bg-neutral-100 hover:text-ink",
-            )}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Tabs - Flowbite underline tabs with icons */}
+      <AdminTabs
+        ariaLabel="Barcode tools"
+        items={TABS.map(({ id, label, Icon }) => ({
+          value: id,
+          label: (
+            <span className="flex items-center gap-[8px]">
+              <Icon className="h-[16px] w-[16px]" />
+              <span className="hidden sm:inline">{label}</span>
+            </span>
+          ),
+        }))}
+        value={activeTab}
+        onChange={(v) => setActiveTab(v as Tab)}
+      />
 
       {/* Tab content */}
       {activeTab === "browse" && <BrowseTab />}
@@ -191,83 +195,127 @@ function BrowseTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-1 items-center gap-2 rounded-sm border border-neutral-200 bg-paper px-2.5">
-          <Search className="h-3.5 w-3.5 shrink-0 text-neutral-500" aria-hidden />
+    <div className="flex flex-col gap-[16px]">
+      {/* Controls - Flowbite table toolbar */}
+      <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm lg:flex-row lg:items-center">
+        <div className="relative min-w-0 flex-1 lg:max-w-[480px]">
+          <label htmlFor="barcodes-search" className="sr-only">
+            Search products
+          </label>
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+            <Search className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+          </div>
           <Input
+            id="barcodes-search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products…"
-            className="h-9 border-0 px-0 focus-visible:ring-0"
+            className="pl-[36px] pr-[40px]"
           />
           {search && (
-            <button type="button" onClick={() => setSearch("")} aria-label="Clear" className="text-neutral-500 hover:text-ink">
-              <X className="h-3.5 w-3.5" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear"
+              className="absolute inset-y-0 right-[8px] my-auto flex h-[28px] w-[28px] items-center justify-center rounded-[6px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <X className="h-[16px] w-[16px]" aria-hidden />
             </button>
           )}
         </div>
-        <Select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as AdminProductSort)}
-          options={[
-            { value: "newest", label: "Newest" },
-            { value: "price-asc", label: "Price: low to high" },
-            { value: "price-desc", label: "Price: high to low" },
-            { value: "stock-desc", label: "Stock: high to low" },
-          ]}
-          className="w-36"
-        />
-        <Select
-          value={sizeId}
-          onChange={(e) => setSizeId(e.target.value)}
-          options={LABEL_SIZES.map((s) => ({ value: s.id, label: `${s.label} — ${s.note}` }))}
-          className="w-56"
-        />
+        <div className="flex flex-col gap-[12px] sm:flex-row sm:flex-wrap sm:items-center lg:ml-auto lg:shrink-0">
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="barcodes-sort" className="shrink-0 text-[13px] font-medium text-gray-500">
+              Sort
+            </label>
+            <Select
+              id="barcodes-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as AdminProductSort)}
+              options={[
+                { value: "newest", label: "Newest" },
+                { value: "price-asc", label: "Price: low to high" },
+                { value: "price-desc", label: "Price: high to low" },
+                { value: "stock-desc", label: "Stock: high to low" },
+              ]}
+              containerClassName="min-w-0 flex-1 sm:flex-none"
+              className="sm:w-36"
+            />
+          </div>
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="barcodes-size" className="shrink-0 text-[13px] font-medium text-gray-500">
+              Label size
+            </label>
+            <Select
+              id="barcodes-size"
+              value={sizeId}
+              onChange={(e) => setSizeId(e.target.value)}
+              options={LABEL_SIZES.map((s) => ({ value: s.id, label: `${s.label} — ${s.note}` }))}
+              containerClassName="min-w-0 flex-1 sm:flex-none"
+              className="sm:w-56"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Selection bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-sm border border-neutral-200 bg-neutral-50 px-4 py-2 text-sm">
-        <button type="button" onClick={selectAll} className="flex items-center gap-1.5 text-neutral-600 hover:text-ink">
-          <CheckSquare className="h-3.5 w-3.5" aria-hidden /> Select all
-        </button>
-        <button type="button" onClick={clearAll} className="flex items-center gap-1.5 text-neutral-600 hover:text-ink">
-          <Square className="h-3.5 w-3.5" aria-hidden /> Clear
-        </button>
-        <span className="text-neutral-400">|</span>
-        <span className="text-neutral-600">{selected.size} selected</span>
-        <div className="ml-auto flex items-center gap-2">
+      <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-gray-50 px-[16px] py-[12px] text-[14px] sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-wrap items-center gap-[12px]">
+          <button
+            type="button"
+            onClick={selectAll}
+            className="flex items-center gap-[6px] font-medium text-gray-500 transition duration-75 hover:text-gray-900"
+          >
+            <CheckSquare className="h-[16px] w-[16px]" aria-hidden /> Select all
+          </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            className="flex items-center gap-[6px] font-medium text-gray-500 transition duration-75 hover:text-gray-900"
+          >
+            <Square className="h-[16px] w-[16px]" aria-hidden /> Clear
+          </button>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-500">
+            <strong className="font-semibold text-gray-900">{selected.size}</strong> selected
+          </span>
+        </div>
+        <div className="flex items-center gap-[8px] sm:ml-auto">
+          {/* Flowbite alternative button */}
           <button
             type="button"
             onClick={() => setShowSheet((v) => !v)}
             disabled={selected.size === 0}
-            className="flex items-center gap-1.5 rounded-sm border border-neutral-300 px-3 py-1 text-xs transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+            className="inline-flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[12px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
           >
-            <Printer className="h-3 w-3" aria-hidden />
+            <Printer className="h-[16px] w-[16px]" aria-hidden />
             {showSheet ? "Hide preview" : "Preview labels"}
           </button>
-          <Button size="sm" disabled={selected.size === 0} onClick={handlePrintSelected}>
-            <Printer className="h-3.5 w-3.5 mr-1.5" aria-hidden />
+          {/* Flowbite primary button */}
+          <button
+            type="button"
+            disabled={selected.size === 0}
+            onClick={handlePrintSelected}
+            className="inline-flex h-[36px] flex-1 items-center justify-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[16px] text-[13px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+          >
+            <Printer className="h-[16px] w-[16px]" aria-hidden />
             Print {selected.size > 0 ? `${selected.size}` : ""}
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Label preview sheet */}
       {showSheet && labels.length > 0 && (
-        <div className="rounded-sm border border-neutral-200 bg-paper p-3">
+        <div className="rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
           <LabelSheet labels={labels} defaultSizeId={sizeId} />
         </div>
       )}
 
       {/* Product grid */}
       {isLoading ? (
-        <div className="flex h-40 items-center justify-center">
-          <Spinner />
-        </div>
+        <AdminProductGridSkeleton count={8} />
       ) : (
-        <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", isFetching && "opacity-70")}>
+        <div className={cn("grid grid-cols-2 gap-[16px] sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5", isFetching && "opacity-70")}>
           {products.map((p) => {
             const barcode = p._id.slice(-8).toUpperCase();
             const isSelected = selected.has(p._id);
@@ -277,18 +325,18 @@ function BrowseTab() {
                 type="button"
                 onClick={() => toggleSelect(p._id)}
                 className={cn(
-                  "group relative flex flex-col gap-2 rounded-sm border p-3 text-left transition-all",
+                  "group relative flex flex-col gap-[8px] rounded-[8px] border p-[12px] text-left shadow-sm transition duration-150",
                   isSelected
-                    ? "border-ink bg-ink/5 shadow-sm"
-                    : "border-neutral-200 bg-paper hover:border-neutral-400",
+                    ? "border-[#1A56DB] bg-blue-50"
+                    : "border-gray-200 bg-white hover:bg-gray-50",
                 )}
               >
                 {/* Checkmark */}
                 <div className={cn(
-                  "absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors",
-                  isSelected ? "border-ink bg-ink" : "border-neutral-300 bg-paper",
+                  "absolute right-[8px] top-[8px] flex h-[20px] w-[20px] items-center justify-center rounded-full border-2 transition-colors",
+                  isSelected ? "border-[#1A56DB] bg-[#1A56DB]" : "border-gray-300 bg-white",
                 )}>
-                  {isSelected && <Check className="h-3 w-3 text-white" aria-hidden />}
+                  {isSelected && <Check className="h-[12px] w-[12px] text-white" aria-hidden />}
                 </div>
 
                 {/* Barcode preview */}
@@ -315,7 +363,7 @@ function BrowseTab() {
 
       {/* Pagination */}
       {meta && (meta.totalPages ?? 1) > 1 && (
-        <div className="flex items-center justify-between border-t border-neutral-200 pt-3 text-xs text-neutral-600">
+        <div className="flex flex-wrap items-center justify-between gap-[8px] border-t border-neutral-200 pt-3 text-xs text-neutral-600">
           <span>Page {meta.page} of {meta.totalPages} · {meta.total} products</span>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</Button>
@@ -359,34 +407,42 @@ function ScanTab({ initialCode, onOpenCamera, setScanResult }: ScanTabProps) {
   const format = detectFormat(code);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-[16px]">
       {/* Scanner input */}
-      <div className="flex flex-col gap-3 rounded-sm border border-neutral-200 bg-paper p-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-ink">Scan or enter barcode</h2>
+      <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+        <div className="flex items-center justify-between gap-[8px]">
+          <h2 className="text-[18px] font-semibold text-gray-900">Scan or enter barcode</h2>
+          {/* Flowbite alternative button */}
           <button
             type="button"
             onClick={onOpenCamera}
-            className="flex items-center gap-1.5 rounded-sm border border-neutral-300 px-3 py-1.5 text-xs transition-colors hover:border-ink hover:text-ink"
+            className="inline-flex h-[36px] items-center gap-[8px] rounded-[8px] border border-gray-300 bg-white px-[12px] text-[13px] font-medium text-gray-900 transition duration-75 hover:bg-gray-100"
           >
-            <Camera className="h-3.5 w-3.5" aria-hidden /> Camera
+            <Camera className="h-[16px] w-[16px]" aria-hidden /> Camera
           </button>
         </div>
-        <p className="text-xs text-neutral-500">
+        <p className="text-[13px] text-gray-500">
           Point your USB scanner at a label, or type a barcode / SKU below. USB scanner works anywhere on this page.
         </p>
-        <div className="flex items-center gap-2 rounded-sm border border-neutral-300 bg-neutral-50 px-2.5">
-          <ScanLine className="h-3.5 w-3.5 shrink-0 text-neutral-500" aria-hidden />
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+            <ScanLine className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+          </div>
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Barcode or SKU…"
             autoFocus
-            className="h-10 border-0 bg-transparent px-0 font-mono focus-visible:ring-0"
+            className="pl-[36px] pr-[40px] font-mono"
           />
           {code && (
-            <button type="button" onClick={() => { setCode(""); setScanResult(null); }} aria-label="Clear" className="text-neutral-500 hover:text-ink">
-              <X className="h-3.5 w-3.5" aria-hidden />
+            <button
+              type="button"
+              onClick={() => { setCode(""); setScanResult(null); }}
+              aria-label="Clear"
+              className="absolute inset-y-0 right-[8px] my-auto flex h-[28px] w-[28px] items-center justify-center rounded-[6px] text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <X className="h-[16px] w-[16px]" aria-hidden />
             </button>
           )}
         </div>
@@ -394,34 +450,32 @@ function ScanTab({ initialCode, onOpenCamera, setScanResult }: ScanTabProps) {
 
       {/* Result */}
       {code.length >= 3 && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[16px]">
           {/* Barcode display */}
-          <div className="flex justify-center rounded-sm border border-neutral-200 bg-paper p-3">
+          <div className="flex justify-center rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <BarcodeTag value={code} format={format} label={code} width={220} height={80} />
           </div>
 
           {/* Product lookup */}
           {(isLoading || isFetching) ? (
-            <div className="flex h-20 items-center justify-center">
-              <Spinner />
-            </div>
+            <AdminInlineSkeleton rows={3} withThumb />
           ) : results.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+            <div className="flex flex-col gap-[8px]">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-gray-500">
                 Products matching &ldquo;{code}&rdquo;
               </p>
               {results.map((p) => (
                 <a
                   key={p._id}
                   href={`/admin/products/${p._id}`}
-                  className="flex items-center gap-3 rounded-sm border border-neutral-200 bg-paper p-4 transition-colors hover:border-ink"
+                  className="flex items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm transition duration-75 hover:bg-gray-50"
                 >
                   {p.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image} alt="" className="h-10 w-10 shrink-0 rounded-sm border border-neutral-200 object-cover" />
+                    <img src={p.image} alt="" className="h-[40px] w-[40px] shrink-0 rounded-[8px] border border-gray-200 object-cover" />
                   ) : (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-neutral-100">
-                      <Package className="h-4 w-4 text-neutral-400" />
+                    <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[8px] bg-gray-100">
+                      <Package className="h-[20px] w-[20px] text-gray-400" />
                     </div>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col">
@@ -435,8 +489,8 @@ function ScanTab({ initialCode, onOpenCamera, setScanResult }: ScanTabProps) {
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-sm border border-dashed border-neutral-300 p-5 text-sm text-neutral-500">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
+            <div className="flex items-center gap-[12px] rounded-[8px] border border-dashed border-gray-300 bg-white p-[20px] text-[14px] text-gray-500">
+              <AlertTriangle className="h-[16px] w-[16px] shrink-0 text-yellow-500" aria-hidden />
               No product found for barcode &ldquo;{code}&rdquo;. Check if the SKU is correct or create a new product.
             </div>
           )}
@@ -450,7 +504,7 @@ function ScanTab({ initialCode, onOpenCamera, setScanResult }: ScanTabProps) {
 
 function GenerateTab() {
   const [value, setValue] = React.useState("");
-  const [format, setFormat] = React.useState<"CODE128" | "EAN13" | "UPCA" | "EAN8" | "CODE39" | "QR">("CODE128");
+  const [format, setFormat] = React.useState<Symbology>("CODE128");
   const [title, setTitle] = React.useState("");
   const [sku, setSku] = React.useState("");
   const [price, setPrice] = React.useState("");
@@ -479,47 +533,49 @@ function GenerateTab() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+    <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[1fr_320px]">
       {/* Form */}
-      <div className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-        <h2 className="text-base font-semibold text-ink">Custom barcode</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500 sm:col-span-2">
+      <div className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+        <h2 className="text-[18px] font-semibold text-gray-900">Custom barcode</h2>
+        <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900 sm:col-span-2">
             Barcode value *
             <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="SKU-0001 or 5901234123457" />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
             Format
             <Select
               value={format}
-              onChange={(e) => setFormat(e.target.value as typeof format)}
+              onChange={(e) => setFormat(e.target.value as Symbology)}
               options={[
                 { value: "CODE128", label: "Code 128 (universal)" },
                 { value: "EAN13", label: "EAN-13 (13 digits)" },
                 { value: "UPCA", label: "UPC-A (12 digits)" },
                 { value: "EAN8", label: "EAN-8 (8 digits)" },
                 { value: "CODE39", label: "Code 39 (alphanumeric)" },
+                { value: "ITF14", label: "ITF-14 (14 digits, bearer box)" },
                 { value: "QR", label: "QR Code (2D)" },
+                { value: "DATAMATRIX", label: "DataMatrix (2D)" },
               ]}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
             Copies
             <Input type="number" min={1} max={100} value={qty} onChange={(e) => setQty(Math.max(1, Math.min(100, Number(e.target.value))))} />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
             Product title
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Optional label text" />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
             SKU (sub-label)
             <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. TSHIRT-L" />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
             Price
             <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. Tk 1,499" />
           </label>
-          <label className="flex flex-col gap-1.5 text-xs text-neutral-500">
+          <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
             Label size
             <Select
               value={sizeId}
@@ -529,16 +585,26 @@ function GenerateTab() {
           </label>
         </div>
 
-        <Button disabled={!value} onClick={handleGenerate} className="w-full sm:w-auto self-start">
-          {generated ? <Check className="mr-1.5 h-4 w-4" /> : <Printer className="mr-1.5 h-4 w-4" />}
+        {/* Flowbite primary button */}
+        <button
+          type="button"
+          disabled={!value}
+          onClick={handleGenerate}
+          className="inline-flex h-[40px] items-center gap-[8px] self-start rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {generated ? (
+            <Check className="h-[16px] w-[16px]" aria-hidden />
+          ) : (
+            <Printer className="h-[16px] w-[16px]" aria-hidden />
+          )}
           {generated ? "Sent to printer" : `Print ${qty} label${qty !== 1 ? "s" : ""}`}
-        </Button>
+        </button>
       </div>
 
       {/* Live preview */}
       {value && (
-        <div className="flex flex-col gap-3 rounded-sm border border-neutral-200 bg-paper p-3">
-          <h2 className="text-sm font-semibold text-ink">Preview</h2>
+        <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+          <h2 className="text-[18px] font-semibold text-gray-900">Preview</h2>
           <div className="flex justify-center">
             <BarcodeTag value={value} format={format} label={title || value} width={200} height={70} />
           </div>
@@ -555,9 +621,10 @@ function MissingTab() {
   const products = data?.data?.products ?? [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+    <div className="flex flex-col gap-[16px]">
+      {/* Flowbite yellow alert */}
+      <div className="flex items-center gap-[12px] rounded-[8px] border border-yellow-300 bg-yellow-50 p-[16px] text-[14px] text-yellow-800">
+        <AlertTriangle className="h-[16px] w-[16px] shrink-0" aria-hidden />
         <span>
           {isLoading
             ? "Loading products..."
@@ -565,19 +632,15 @@ function MissingTab() {
         </span>
       </div>
 
-      {isLoading && (
-        <div className="flex h-40 items-center justify-center">
-          <Spinner />
-        </div>
-      )}
+      {isLoading && <AdminInlineSkeleton rows={6} withThumb />}
 
       {!isLoading && products.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-[8px]">
           {products.map((p) => (
             <a
               key={p._id}
               href={`/admin/products/${p._id}`}
-              className="flex items-center gap-3 rounded-sm border border-neutral-200 bg-paper p-4 transition-colors hover:border-ink"
+              className="flex items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm transition duration-75 hover:bg-gray-50"
             >
               {p.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -591,7 +654,7 @@ function MissingTab() {
                 <span className="truncate text-sm font-semibold text-ink">{p.title}</span>
                 <span className="text-xs text-neutral-500">Tk {p.price.toLocaleString("en-IN")} · {p.stock} in stock</span>
               </div>
-              <span className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+              <span className="shrink-0 rounded-[4px] bg-yellow-100 px-[10px] py-[2px] text-[12px] font-medium text-yellow-800">
                 Missing SKU
               </span>
             </a>

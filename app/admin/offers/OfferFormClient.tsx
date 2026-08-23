@@ -18,7 +18,8 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { Button, Input, Label, Spinner } from "@/components/ui";
+import { Button, Input, Label } from "@/components/ui";
+import { AdminFormSkeleton } from "@/components/admin/Skeleton";
 import {
   BannerCarouselManager,
   ProductSelector,
@@ -212,17 +213,13 @@ export function OfferFormClient({ mode, id }: OfferFormClientProps) {
   );
 
   if (mode === "edit" && isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper">
-        <Spinner />
-      </div>
-    );
+    return <AdminFormSkeleton sections={3} sidebarCards={2} />;
   }
 
   if (mode === "edit" && (isError || !offer)) {
     const message = error instanceof AdminError ? error.message : "Couldn't load offer.";
     return (
-      <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
+      <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
         <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
         <p className="text-sm text-neutral-500">{message}</p>
         <div className="flex items-center gap-2">
@@ -384,17 +381,17 @@ function OfferForm({ mode, offer }: OfferFormProps) {
       : `${currencyDraft || "BDT"} ${discountValueDraft || 0} off`;
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-[6px]">
           <Link
             href="/admin/offers"
-            className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-ink"
+            className="inline-flex items-center gap-[6px] text-[14px] font-medium text-gray-500 transition duration-75 hover:text-[#1A56DB]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> Back to offers
+            <ArrowLeft className="h-[16px] w-[16px]" aria-hidden /> Back to offers
           </Link>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold text-ink">
-            <Sparkles className="h-5 w-5 text-neutral-400" aria-hidden /> {heading}
+          <h1 className="flex items-center gap-[8px] text-[24px] font-bold leading-tight text-gray-900">
+            <Sparkles className="h-[20px] w-[20px] text-gray-400" aria-hidden /> {heading}
           </h1>
           {offer ? (
             <p className="text-sm text-neutral-500">
@@ -408,44 +405,45 @@ function OfferForm({ mode, offer }: OfferFormProps) {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[8px]">
           {mode === "edit" && offer ? (
-            <Button
+            /* Flowbite destructive-outline button */
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={onDelete}
               disabled={remove.isPending || update.isPending}
+              className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] border border-red-300 bg-white px-[16px] text-[14px] font-medium text-red-600 transition duration-75 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {remove.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
               ) : (
-                <Trash2 className="h-4 w-4" aria-hidden />
+                <Trash2 className="h-[16px] w-[16px]" aria-hidden />
               )}
-              <span className="ml-1.5">Delete</span>
-            </Button>
+              Delete
+            </button>
           ) : null}
-          <Button
+          {/* Flowbite primary button */}
+          <button
             type="submit"
-            size="sm"
             disabled={(mode === "edit" && !isDirty) || create.isPending || update.isPending}
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {create.isPending || update.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="h-[16px] w-[16px] animate-spin" aria-hidden />
             ) : (
-              <Save className="h-4 w-4" aria-hidden />
+              <Save className="h-[16px] w-[16px]" aria-hidden />
             )}
-            <span className="ml-1.5">{mode === "create" ? "Create" : "Save"}</span>
-          </Button>
+            {mode === "create" ? "Create" : "Save changes"}
+          </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[1fr_320px]">
         {/* Main column */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-[16px]">
           {/* Identity */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Identity</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Identity</h2>
             <Field label="Name" error={errors.name?.message}>
               <Input invalid={!!errors.name} placeholder="Eid Mubarak sale" {...register("name")} />
             </Field>
@@ -467,9 +465,9 @@ function OfferForm({ mode, offer }: OfferFormProps) {
           </section>
 
           {/* Schedule */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Schedule</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Schedule</h2>
+            <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
               <Field
                 label="Starts at"
                 error={errors.startsAt?.message}
@@ -506,8 +504,8 @@ function OfferForm({ mode, offer }: OfferFormProps) {
           </section>
 
           {/* Discount */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Discount</h2>
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Discount</h2>
             <Field
               label="Type"
               error={errors.discountType?.message}
@@ -518,7 +516,7 @@ function OfferForm({ mode, offer }: OfferFormProps) {
                 <RadioOption {...register("discountType")} value="fixed" label="Fixed" description="A flat currency amount per product, clamped at 0." />
               </div>
             </Field>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2">
               <Field label="Value" error={errors.discountValue?.message} hint={valueHint}>
                 <Input type="number" min={1} step={1} invalid={!!errors.discountValue} {...register("discountValue")} />
               </Field>
@@ -526,15 +524,15 @@ function OfferForm({ mode, offer }: OfferFormProps) {
                 <Input invalid={!!errors.currency} className="uppercase" {...register("currency")} />
               </Field>
             </div>
-            <div className="rounded-sm border border-neutral-100 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+            <div className="rounded-[8px] border border-gray-200 bg-gray-50 px-[12px] py-[8px] text-[13px] text-gray-600">
               Preview: <span className="font-medium text-ink">{valuePreview}</span> · per qualifying product
             </div>
           </section>
 
           {/* Products */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-ink">Products</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">Products</h2>
               <span className="text-xs text-neutral-400">Filter by category, brand, or status · select cross-page</span>
             </div>
             <p className="text-sm text-neutral-500">
@@ -554,14 +552,14 @@ function OfferForm({ mode, offer }: OfferFormProps) {
               )}
             />
             {errors.products?.message ? (
-              <p className="text-xs text-ink">{errors.products.message}</p>
+              <p className="text-[13px] font-medium text-red-600">{errors.products.message}</p>
             ) : null}
           </section>
 
           {/* Banners */}
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-base font-semibold text-ink">Banners</h2>
+              <h2 className="text-[18px] font-semibold text-gray-900">Banners</h2>
               <span className="text-xs text-neutral-400">Drop images, drag to reorder, preview live</span>
             </div>
             <p className="text-sm text-neutral-500">
@@ -596,15 +594,15 @@ function OfferForm({ mode, offer }: OfferFormProps) {
               )}
             />
             {errors.banners && !Array.isArray(errors.banners) && errors.banners.message ? (
-              <p className="text-xs text-ink">{errors.banners.message}</p>
+              <p className="text-[13px] font-medium text-red-600">{errors.banners.message}</p>
             ) : null}
           </section>
         </div>
 
         {/* Side column */}
-        <aside className="flex flex-col gap-4">
-          <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
-            <h2 className="text-base font-semibold text-ink">Storefront placements</h2>
+        <aside className="flex flex-col gap-[16px]">
+          <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <h2 className="text-[18px] font-semibold text-gray-900">Storefront placements</h2>
             <CheckboxField
               label="Homepage hero"
               hint="Banners appear in the homepage hero carousel while the offer is active."
@@ -628,8 +626,8 @@ function OfferForm({ mode, offer }: OfferFormProps) {
           </section>
 
           {offer ? (
-            <section className="flex flex-col gap-2 rounded-sm border border-neutral-200 bg-paper p-3 text-xs text-neutral-500">
-              <h2 className="text-sm font-semibold text-ink">Snapshot</h2>
+            <section className="flex flex-col gap-2 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm text-xs text-neutral-500">
+              <h2 className="text-[18px] font-semibold text-gray-900">Snapshot</h2>
               <div className="flex items-center justify-between">
                 <span>Status</span>
                 <span>{STATUS_OPTIONS.find((o) => o.value === statusDraft)?.label ?? statusDraft}</span>
@@ -653,8 +651,8 @@ function OfferForm({ mode, offer }: OfferFormProps) {
             </section>
           ) : null}
 
-          <section className="flex flex-col gap-3 rounded-sm border border-neutral-200 bg-paper p-3 text-xs text-neutral-500">
-            <h2 className="text-sm font-semibold text-ink">Notes</h2>
+          <section className="flex flex-col gap-3 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm text-xs text-neutral-500">
+            <h2 className="text-[18px] font-semibold text-gray-900">Notes</h2>
             <p>Offers auto-apply — buyers don&apos;t enter a code. The storefront renders strike-through pricing on qualifying products.</p>
             <p>When multiple offers overlap on the same product, the engine picks the one that yields the lowest unit price.</p>
             <p>Coupons stack <em>on top of</em> the offer-discounted subtotal at checkout, never under it.</p>
@@ -668,7 +666,7 @@ function OfferForm({ mode, offer }: OfferFormProps) {
 /* "" Primitives "" */
 
 const textareaClass =
-  "block w-full rounded-sm border border-neutral-200 bg-paper px-2.5 py-1.5 text-sm text-ink placeholder:text-neutral-400 focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-1";
+  "block w-full rounded-[8px] border border-gray-300 bg-gray-50 px-[12px] py-[10px] text-[14px] font-normal text-gray-900 placeholder:text-gray-400 focus:border-[#1A56DB] focus:bg-white focus:outline-none";
 
 interface FieldProps {
   label: string;
@@ -680,10 +678,10 @@ interface FieldProps {
 function Field({ label, hint, error, children }: FieldProps) {
   return (
     <Label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
+      <span className="text-[14px] font-medium text-gray-900">{label}</span>
       {children}
       {error ? (
-        <span className="text-xs text-ink">{error}</span>
+        <span className="text-[13px] font-medium text-red-600">{error}</span>
       ) : hint ? (
         <span className="text-xs text-neutral-400">{hint}</span>
       ) : null}
@@ -699,7 +697,7 @@ const CheckboxField = React.forwardRef<
     <input
       ref={ref}
       type="checkbox"
-      className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-ink focus-visible:ring-1 focus-visible:ring-ink focus-visible:ring-offset-1"
+      className="mt-0.5 h-[16px] w-[16px] rounded border-gray-300 accent-[#1A56DB]"
       {...props}
     />
     <span className="flex flex-col gap-0.5">
@@ -718,11 +716,11 @@ const RadioOption = React.forwardRef<
     icon?: React.ReactNode;
   }
 >(({ label, description, icon, ...props }, ref) => (
-  <label className="group relative flex flex-1 cursor-pointer items-start gap-3 rounded-sm border border-neutral-200 p-3 hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-neutral-50">
+  <label className="group relative flex flex-1 cursor-pointer items-start gap-3 rounded-[8px] border border-gray-200 p-[12px] transition duration-75 hover:bg-gray-50 has-[:checked]:border-[#1A56DB] has-[:checked]:bg-blue-50">
     <input
       ref={ref}
       type="radio"
-      className="mt-0.5 h-4 w-4 border-neutral-300 text-ink focus-visible:ring-1 focus-visible:ring-ink focus-visible:ring-offset-1"
+      className="mt-0.5 h-[16px] w-[16px] border-gray-300 accent-[#1A56DB]"
       {...props}
     />
     <span className="flex min-w-0 flex-col gap-0.5">

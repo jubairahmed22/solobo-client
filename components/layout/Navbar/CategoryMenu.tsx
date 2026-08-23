@@ -54,10 +54,9 @@ export interface CategoryMenuProps {
  * - The strip lives inside the Navbar's row 2, which renders a full-width
  *   black band. This component supplies its own white-on-black styling.
  * - Hovering - or focusing via keyboard - an item with children opens a
- *   compact per-item dropdown listing its sub-categories (and optional
- *   grand-children as an indented sub-list). The dropdown is anchored to the
- *   item itself, not to the whole bar, so multiple opens never overlap and
- *   the cursor only has to travel a short distance from trigger to menu.
+ *   full-width mega menu beneath the bar: one column per sub-category with a
+ *   bold heading and its children listed vertically underneath (Tailwind-UI
+ *   flyout style).
  * - The active item is rendered as a white "pill" with black text - matches
  *   the highlighted HOME state in the reference screenshot.
  * - The leading hamburger button opens the mobile/side drawer (`MobileMenu`)
@@ -103,7 +102,6 @@ export function CategoryMenu({ categories, brands = [], className }: CategoryMen
             return (
               <li
                 key={item.id}
-                className="relative"
                 onMouseEnter={() => setActive(item.hasMenu ? item.id : null)}
               >
                 <Link
@@ -151,12 +149,12 @@ export function CategoryMenu({ categories, brands = [], className }: CategoryMen
 
 /* ───────────────────── Per-item dropdown ─────────────────────
  *
- * Each dropdown is anchored to its trigger (`absolute top-full left-0`) and
- * sits flush against the black bar so the cursor can travel from trigger to
- * panel without crossing a dead zone. Dropdowns are intentionally light-
- * themed (white background, dark text) to pop against the dark bar above -
- * matches the typical mass-market beauty site pattern (klassymissy, sephora,
- * ulta).
+ * Dropdowns are anchored to the nav itself (the `li`s are static, the nav is
+ * `relative`), so the category panel spans the full width of the bar - a
+ * Tailwind-UI-style mega menu - and sits flush against it so the cursor can
+ * travel from trigger to panel without crossing a dead zone. Panels are
+ * light-themed (white background, dark text) to pop against the dark bar
+ * above.
  */
 interface ItemDropdownProps {
   itemId: string;
@@ -196,27 +194,36 @@ function CategoryDropdown({
   return (
     <div
       role="menu"
-      className="animate-dropdown-in absolute left-0 top-full z-40 flex min-w-[12rem] flex-col rounded-b-xl border border-t-0 border-neutral-200 bg-paper shadow-xl"
+      className="animate-dropdown-in absolute inset-x-0 top-full z-40 border-b border-neutral-200 bg-paper shadow-xl"
     >
-      <div className="flex flex-row items-start gap-1 p-4">
+      {/* Tailwind-UI-style flyout: one column per sub-category, bold heading
+          on top, children stacked vertically beneath in plain gray text.
+          Columns spread evenly across the full panel width; extra subs wrap
+          to a second row. max-h + scroll is a safety net for extreme trees. */}
+      <div
+        className="grid max-h-[75vh] gap-x-[32px] gap-y-[40px] overflow-y-auto px-[40px] py-[32px]"
+        style={{
+          gridTemplateColumns: `repeat(${Math.min(subs.length, 4)}, minmax(0, 1fr))`,
+        }}
+      >
         {subs.map((sub) => (
-          <div key={sub.slug} className="flex min-w-[12rem] flex-col">
+          <div key={sub.slug} className="flex flex-col">
             <Link
               href={`/category/${sub.slug}`}
               onClick={onNavigate}
-              className="mb-2 block rounded-lg px-2 py-1.5 text-[12px] font-bold uppercase tracking-wide text-ink transition-colors hover:bg-neutral-100"
+              className="text-[15px] font-semibold leading-6 text-ink hover:underline"
             >
               {sub.name}
             </Link>
 
             {sub.children?.length ? (
-              <ul className="flex flex-col gap-1">
+              <ul className="mt-[24px] grid grid-cols-2 gap-x-[24px] gap-y-[20px]">
                 {sub.children.map((child) => (
                   <li key={child.slug}>
                     <Link
                       href={`/category/${child.slug}`}
                       onClick={onNavigate}
-                      className="block rounded-lg px-2 py-1 text-[12px] text-neutral-600 transition-colors hover:bg-neutral-50 hover:text-ink"
+                      className="block text-[14px] leading-6 text-neutral-500 transition-colors hover:text-ink"
                     >
                       {child.name}
                     </Link>
@@ -226,18 +233,6 @@ function CategoryDropdown({
             ) : null}
           </div>
         ))}
-      </div>
-
-      {/* Footer "Shop All" section */}
-      <div className="border-t border-neutral-100 bg-neutral-50/50 px-6 py-3">
-        <Link
-          href={`/category/${category.slug}`}
-          onClick={onNavigate}
-          className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-neutral-600 hover:text-ink hover:underline"
-        >
-          Shop all {category.name.toLowerCase()}
-          <ArrowRight className="h-3 w-3" aria-hidden />
-        </Link>
       </div>
     </div>
   );

@@ -75,7 +75,16 @@ export function CartSyncBridge() {
     // VARIANT_REQUIRED on a perfectly-good local row.
     const payload = items.map((it) => {
       if (it.variantId) {
-        return { productId: it.productId, variantId: it.variantId, qty: it.qty };
+        // options ride along even with a variantId - they carry the jersey
+        // personalisation keys (Name/Number/Patches) the server prices and
+        // snapshots onto the cart line.
+        return {
+          productId: it.productId,
+          variantId: it.variantId,
+          options:
+            it.options && Object.keys(it.options).length > 0 ? it.options : undefined,
+          qty: it.qty,
+        };
       }
       if (it.options && Object.keys(it.options).length > 0) {
         return { productId: it.productId, options: it.options, qty: it.qty };

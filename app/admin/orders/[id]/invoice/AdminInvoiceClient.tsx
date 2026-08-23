@@ -3,13 +3,15 @@
 import * as React from "react";
 import { AlertTriangle, ArrowLeft, Printer } from "lucide-react";
 import Link from "next/link";
-import { Button, Spinner } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { AdminInvoiceSkeleton } from "@/components/admin/Skeleton";
 import {
   OrderInvoice,
   type InvoiceItem,
   type InvoiceTotals,
 } from "@/components/composed";
 import { useAdminOrder } from "@/hooks/useAdmin";
+import { useAdminSiteSettings } from "@/hooks/useSiteSettings";
 
 /**
  * Admin invoice - every field on every line. The `internalNotes` block is
@@ -20,17 +22,15 @@ import { useAdminOrder } from "@/hooks/useAdmin";
  */
 export function AdminInvoiceClient({ orderId }: { orderId: string }) {
   const { data: order, isLoading, isError } = useAdminOrder(orderId);
+  const { data: settings } = useAdminSiteSettings();
+  const logoUrl = settings?.invoiceLogo || settings?.companyLogo || undefined;
 
   const handlePrint = () => {
     if (typeof window !== "undefined") window.print();
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-40 items-center justify-center">
-        <Spinner />
-      </div>
-    );
+    return <AdminInvoiceSkeleton />;
   }
   if (isError || !order) {
     return (
@@ -88,6 +88,7 @@ export function AdminInvoiceClient({ orderId }: { orderId: string }) {
 
       <OrderInvoice
         tone="admin"
+        logoUrl={logoUrl}
         orderNumber={order.orderNumber}
         placedAt={order.createdAt}
         deliveredAt={order.tracking?.deliveredAt}
@@ -97,7 +98,7 @@ export function AdminInvoiceClient({ orderId }: { orderId: string }) {
         shippingAddress={order.shippingAddress}
         billingAddress={order.billingAddress}
         customer={{
-          name: order.user?.name ?? order.shippingAddress.fullName,
+          name: order.shippingAddress.fullName || order.user?.name || "Guest",
           email: order.user?.email ?? order.email,
           phone: order.user?.phone ?? order.shippingAddress.phone,
         }}

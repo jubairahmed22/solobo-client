@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowRight, Plus, Search, Star, Tag, X } from "lucide-react";
-import { Button, Input, Spinner } from "@/components/ui";
+import { AlertTriangle, ArrowRight, ChevronRight, Plus, Search, Star, Tag, X } from "lucide-react";
+import { Button, Input } from "@/components/ui";
 import { Pagination, Select } from "@/components/composed";
+import { AdminListSkeleton } from "@/components/admin/Skeleton";
 import { cn } from "@/lib/utils/cn";
 import { useAdminBrands } from "@/hooks/useAdmin";
 import { AdminError } from "@/lib/api/admin";
@@ -30,48 +31,87 @@ function formatDate(iso: string): string {
 
 function BrandRow({ brand }: { brand: AdminBrandSummary }) {
   return (
-    <tr className="transition-colors hover:bg-neutral-50">
-      <td className="px-3 py-2.5 align-middle">
-        <div className="flex items-center gap-2.5">
+    <tr className="bg-white transition duration-75 hover:bg-gray-50">
+      <td className="px-[16px] py-[12px] align-middle">
+        <div className="flex items-center gap-[12px]">
           {brand.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={brand.logo} alt="" className="h-8 w-8 shrink-0 rounded-sm border border-neutral-200 object-contain p-0.5" loading="lazy" />
+            <img src={brand.logo} alt="" className="h-[40px] w-[40px] shrink-0 rounded-[8px] border border-gray-100 bg-gray-50 object-contain p-[2px]" loading="lazy" />
           ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-neutral-200 bg-neutral-50 text-neutral-400">
-              <Tag className="h-3.5 w-3.5" aria-hidden />
+            <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[8px] border border-gray-100 bg-gray-50 text-gray-400">
+              <Tag className="h-[16px] w-[16px]" aria-hidden />
             </div>
           )}
           <div className="min-w-0">
-            <Link href={`/admin/brands/${brand._id}`} className="block truncate text-sm font-medium text-ink underline-offset-2 hover:underline">
+            <Link href={`/admin/brands/${brand._id}`} className="block truncate text-[14px] font-semibold text-gray-900 underline-offset-2 hover:text-[#1A56DB] hover:underline">
               {brand.name}
             </Link>
-            <p className="truncate text-xs text-neutral-500">/{brand.slug}{brand.website ? ` · ${brand.website}` : ""}</p>
+            <p className="truncate text-[12px] text-gray-500">/{brand.slug}{brand.website ? ` · ${brand.website}` : ""}</p>
           </div>
         </div>
       </td>
-      <td className="px-3 py-2.5 align-middle">
-        <div className="flex flex-col gap-0.5">
+      <td className="px-[16px] py-[12px] align-middle">
+        <div className="flex flex-col gap-[4px]">
+          {/* Flowbite badges */}
           <span className={cn(
-            "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold",
-            brand.isActive ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500",
+            "inline-flex w-fit items-center rounded-[4px] px-[10px] py-[2px] text-[12px] font-medium",
+            brand.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800",
           )}>
             {brand.isActive ? "Active" : "Hidden"}
           </span>
           {brand.isFeatured ? (
-            <span className="inline-flex items-center gap-0.5 rounded-sm px-1.5 py-0.5 text-[10px] font-semibold bg-accent/20 text-ink">
-              <Star className="h-2.5 w-2.5" aria-hidden /> Featured
+            <span className="inline-flex w-fit items-center gap-[4px] rounded-[4px] bg-yellow-100 px-[10px] py-[2px] text-[12px] font-medium text-yellow-800">
+              <Star className="h-[12px] w-[12px]" aria-hidden /> Featured
             </span>
           ) : null}
         </div>
       </td>
-      <td className="px-3 py-2.5 align-middle tabular-nums text-sm text-neutral-600">{brand.order}</td>
-      <td className="px-3 py-2.5 align-middle text-xs text-neutral-400">{formatDate(brand.updatedAt)}</td>
-      <td className="px-3 py-2.5 align-middle text-right">
-        <Link href={`/admin/brands/${brand._id}`} className="inline-flex items-center gap-1 rounded-sm px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-ink">
-          Edit <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+      <td className="hidden px-[16px] py-[12px] align-middle tabular-nums text-[14px] text-gray-500 lg:table-cell">{brand.order}</td>
+      <td className="hidden px-[16px] py-[12px] align-middle text-[13px] text-gray-500 lg:table-cell">{formatDate(brand.updatedAt)}</td>
+      <td className="px-[16px] py-[12px] align-middle text-right">
+        <Link href={`/admin/brands/${brand._id}`} className="inline-flex items-center gap-[6px] rounded-[8px] px-[10px] py-[8px] text-[13px] font-medium text-[#1A56DB] transition duration-75 hover:bg-gray-100 hover:underline">
+          Edit <ArrowRight className="h-[16px] w-[16px]" aria-hidden />
         </Link>
       </td>
     </tr>
+  );
+}
+
+/** Mobile card - native-app list cell, whole row taps through to edit. */
+function BrandCardMobile({ brand }: { brand: AdminBrandSummary }) {
+  return (
+    <Link
+      href={`/admin/brands/${brand._id}`}
+      className="flex items-center gap-[12px] px-[16px] py-[12px] active:bg-gray-50"
+    >
+      {brand.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={brand.logo} alt="" className="h-[44px] w-[44px] shrink-0 rounded-[8px] border border-gray-100 bg-gray-50 object-contain p-[2px]" loading="lazy" />
+      ) : (
+        <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[8px] border border-gray-100 bg-gray-50 text-gray-400">
+          <Tag className="h-[18px] w-[18px]" aria-hidden />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-semibold text-gray-900">{brand.name}</p>
+        <p className="truncate text-[12px] text-gray-500">/{brand.slug}</p>
+        <div className="mt-[6px] flex flex-wrap items-center gap-[6px]">
+          <span className={cn(
+            "rounded-[4px] px-[8px] py-[2px] text-[11px] font-medium",
+            brand.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800",
+          )}>
+            {brand.isActive ? "Active" : "Hidden"}
+          </span>
+          {brand.isFeatured ? (
+            <span className="inline-flex items-center gap-[4px] rounded-[4px] bg-yellow-100 px-[8px] py-[2px] text-[11px] font-medium text-yellow-800">
+              <Star className="h-[11px] w-[11px]" aria-hidden /> Featured
+            </span>
+          ) : null}
+          <span className="text-[11px] text-gray-400">Updated {formatDate(brand.updatedAt)}</span>
+        </div>
+      </div>
+      <ChevronRight className="h-[16px] w-[16px] shrink-0 text-gray-300" aria-hidden />
+    </Link>
   );
 }
 
@@ -118,79 +158,107 @@ export function BrandsAdminClient() {
   const filtersActive = status !== "all" || featured !== "all" || Boolean(qFromUrl);
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-[16px]">
+      <header className="flex flex-wrap items-center justify-between gap-[12px]">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Brands</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">Manage the brand directory products are tagged against. Featured brands surface in the homepage strip.</p>
+          <h1 className="text-[20px] font-bold leading-tight text-gray-900 sm:text-[24px]">Brands</h1>
+          <p className="mt-[4px] text-[13px] text-gray-500 sm:text-[14px]">Manage the brand directory products are tagged against. Featured brands surface in the homepage strip.</p>
         </div>
-        <div className="flex items-center gap-2">
-          {meta ? <span className="text-sm text-neutral-400">{meta.total.toLocaleString("en-US")} total</span> : null}
-          <Link href="/admin/brands/new" className="inline-flex items-center gap-1.5 rounded-sm bg-ink px-3 py-2 text-sm font-medium text-paper transition-colors hover:bg-neutral-800">
-            <Plus className="h-4 w-4" aria-hidden /> New brand
+        <div className="flex items-center gap-[8px]">
+          {meta ? <span className="text-[14px] text-gray-500">{meta.total.toLocaleString("en-US")} total</span> : null}
+          {/* Flowbite primary button */}
+          <Link
+            href="/admin/brands/new"
+            className="inline-flex h-[40px] items-center gap-[8px] rounded-[8px] bg-[#1A56DB] px-[16px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F]"
+          >
+            <Plus className="h-[16px] w-[16px]" aria-hidden /> New brand
           </Link>
         </div>
       </header>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-sm border border-neutral-200 bg-paper px-4 py-3">
-        <form onSubmit={onSubmitSearch} className="flex min-w-[180px] flex-1 items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" aria-hidden />
-            <Input type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Name or slug" className="pl-8" />
+      {/* Filter bar - Flowbite table toolbar */}
+      <div className="flex flex-col gap-[12px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm lg:flex-row lg:items-center">
+        <form onSubmit={onSubmitSearch} className="flex w-full min-w-0 flex-1 items-center gap-[8px]">
+          <label htmlFor="brands-search" className="sr-only">Search brands</label>
+          <div className="relative min-w-0 flex-1 lg:max-w-[420px]">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-[12px]">
+              <Search className="h-[16px] w-[16px] text-gray-500" aria-hidden />
+            </div>
+            <Input id="brands-search" type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} placeholder="Name or slug" className="pl-[36px]" />
           </div>
-          <button type="submit" className="rounded-full border border-neutral-200 px-4 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:border-neutral-400 hover:text-ink">Find</button>
+          <button
+            type="submit"
+            className="h-[40px] shrink-0 rounded-[8px] bg-[#1A56DB] px-[20px] text-[14px] font-medium text-white transition duration-75 hover:bg-[#1E429F]"
+          >
+            Find
+          </button>
         </form>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Status</span>
-          <Select value={status} onChange={(e) => update({ status: e.target.value === "all" ? undefined : e.target.value })} options={STATUS_FILTERS} />
-        </div>
-        <div className="h-5 w-px bg-neutral-200" />
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-neutral-400">Featured</span>
-          <Select value={featured} onChange={(e) => update({ featured: e.target.value === "all" ? undefined : e.target.value })} options={FEATURED_FILTERS} />
-        </div>
-        {filtersActive ? (
-          <>
-            <div className="h-5 w-px bg-neutral-200" />
-            <button type="button" onClick={() => router.replace(pathname, { scroll: false })} className="flex items-center gap-1 text-xs text-neutral-400 hover:text-ink">
-              <X className="h-3 w-3" aria-hidden /> Clear
+
+        <div className="flex flex-wrap items-center gap-[12px] lg:ml-auto lg:shrink-0 lg:justify-end">
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="brands-status" className="text-[13px] font-medium text-gray-500">Status</label>
+            <Select id="brands-status" value={status} onChange={(e) => update({ status: e.target.value === "all" ? undefined : e.target.value })} options={STATUS_FILTERS} />
+          </div>
+          <div className="flex items-center gap-[8px]">
+            <label htmlFor="brands-featured" className="text-[13px] font-medium text-gray-500">Featured</label>
+            <Select id="brands-featured" value={featured} onChange={(e) => update({ featured: e.target.value === "all" ? undefined : e.target.value })} options={FEATURED_FILTERS} />
+          </div>
+          {filtersActive ? (
+            <button
+              type="button"
+              onClick={() => router.replace(pathname, { scroll: false })}
+              className="inline-flex h-[40px] items-center gap-[6px] rounded-[8px] border border-gray-200 bg-white px-[12px] text-[13px] font-medium text-gray-500 transition duration-75 hover:bg-gray-100 hover:text-gray-900"
+            >
+              <X className="h-[14px] w-[14px]" aria-hidden /> Clear
             </button>
-          </>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper"><Spinner /></div>
+        <AdminListSkeleton rows={8} columns={3} withThumb />
       ) : isError ? (
-        <div className="flex flex-col items-center gap-3 rounded-sm border border-neutral-200 bg-paper py-12 text-center">
-          <AlertTriangle className="h-6 w-6 text-neutral-300" aria-hidden />
-          <p className="text-sm text-neutral-500">{error instanceof AdminError ? error.message : "Couldn't load brands."}</p>
+        <div className="flex flex-col items-center gap-[12px] rounded-[8px] border border-gray-200 bg-white py-[48px] text-center shadow-sm">
+          <AlertTriangle className="h-[24px] w-[24px] text-gray-400" aria-hidden />
+          <p className="text-[14px] text-gray-500">{error instanceof AdminError ? error.message : "Couldn't load brands."}</p>
           <Button variant="secondary" onClick={() => refetch()}>Try again</Button>
         </div>
       ) : brands.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-sm border border-dashed border-neutral-200 bg-paper py-14 text-center">
-          <Tag className="h-8 w-8 text-neutral-200" aria-hidden />
-          <p className="font-medium text-neutral-600">No brands match these filters.</p>
+        <div className="flex flex-col items-center gap-[8px] rounded-[8px] border border-dashed border-gray-300 bg-white py-[56px] text-center">
+          <Tag className="h-[32px] w-[32px] text-gray-300" aria-hidden />
+          <p className="text-[14px] font-medium text-gray-600">No brands match these filters.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-sm border border-neutral-200 bg-paper">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50">
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Brand</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Status</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Order</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Updated</th>
-                <th className="px-3 py-2.5" aria-label="Actions" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {brands.map((b) => <BrandRow key={b._id} brand={b} />)}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile - native-app card list */}
+          <div className="overflow-hidden rounded-[8px] border border-gray-200 bg-white shadow-sm md:hidden">
+            <ul className="divide-y divide-gray-100">
+              {brands.map((b) => (
+                <li key={b._id}>
+                  <BrandCardMobile brand={b} />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Desktop / tablet - full table */}
+          <div className="hidden overflow-x-auto rounded-[8px] border border-gray-200 bg-white shadow-sm md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50">
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Brand</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Status</th>
+                  <th className="hidden px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400 lg:table-cell">Order</th>
+                  <th className="hidden px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400 lg:table-cell">Updated</th>
+                  <th className="px-3 py-2.5" aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {brands.map((b) => <BrandRow key={b._id} brand={b} />)}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={(p) => update({ page: String(p) })} className="mt-2" /> : null}

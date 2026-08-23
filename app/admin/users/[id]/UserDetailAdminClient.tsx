@@ -3,7 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Mail, Phone, ShieldCheck, ShieldOff, Sparkles } from "lucide-react";
-import { Badge, Button, Input, Spinner } from "@/components/ui";
+import { Badge, Button, Input } from "@/components/ui";
+import { AdminDetailSkeleton } from "@/components/admin/Skeleton";
 import { Select } from "@/components/composed";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,7 +47,7 @@ export function UserDetailAdminClient({ id }: { id: string }) {
   const { data: user, isLoading, isError, error, refetch } = useAdminUser(id);
 
   if (isLoading) {
-    return <div className="flex h-64 items-center justify-center rounded-sm border border-neutral-200 bg-paper"><Spinner /></div>;
+    return <AdminDetailSkeleton lineItems={2} sidebarCards={2} />;
   }
 
   if (isError || !user) {
@@ -82,7 +83,7 @@ function UserDetailPanels({ user }: { user: AdminUserDetail }) {
 
       <ProfileCard user={user} isSelf={isSelf} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-5">
           <RecentOrdersCard orders={user.recentOrders} />
         </div>
@@ -109,7 +110,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 function ProfileCard({ user, isSelf }: { user: AdminUserDetail; isSelf: boolean }) {
   return (
     <section className="flex flex-col gap-5 rounded-sm border border-neutral-200 bg-paper p-3">
-      <div className="flex flex-wrap items-start gap-4">
+      <div className="flex flex-wrap items-start gap-[16px]">
         {user.avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={user.avatar} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
@@ -192,7 +193,7 @@ function RolePanel({ user, isSelf }: { user: AdminUserDetail; isSelf: boolean })
   };
 
   return (
-    <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+    <section className="flex flex-col gap-[16px] rounded-sm border border-neutral-200 bg-paper p-3">
       <h2 className="text-sm font-semibold text-ink">Role</h2>
       <Select value={draft} onChange={(e) => setDraft(e.target.value as AdminAssignableRole)} options={ROLE_OPTIONS} disabled={!callerCanModify} />
       <p className="text-xs text-neutral-500">
@@ -241,7 +242,7 @@ function StatusPanel({ user, isSelf }: { user: AdminUserDetail; isSelf: boolean 
   };
 
   return (
-    <section className="flex flex-col gap-4 rounded-sm border border-neutral-200 bg-paper p-3">
+    <section className="flex flex-col gap-[16px] rounded-sm border border-neutral-200 bg-paper p-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-ink">Status</h2>
         <Badge variant={user.isSuspended ? "outline" : "solid"} className="gap-1">
