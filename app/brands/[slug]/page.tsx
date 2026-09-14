@@ -1,14 +1,13 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import axios from "axios";
 import { Navbar, Footer } from "@/components/layout";
-import { Breadcrumb, ProductCard } from "@/components/composed";
 import { BreadcrumbJsonLd } from "@/components/seo";
 import { brandMetadata } from "@/lib/seo/metadata";
 import type { ApiResponse } from "@/types/api";
 import type { BrandDetail, ProductSummary } from "@/types/catalog";
+import { BrandProductsClient } from "./BrandProductsClient";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:50001";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -30,10 +29,22 @@ const fetchBrand = cache(async (slug: string): Promise<BrandDetail | null> => {
   }
 });
 
-async function fetchBrandProducts(slug: string): Promise<ProductSummary[]> {
+async function fetchInitialProducts(brandSlug: string): Promise<ProductSummary[]> {
   try {
     const res = await axios.get<ApiResponse<ProductSummary[]>>(`${API_URL}/api/products`, {
-      params: { brand: slug, limit: 24, sort: "newest" },
+      params: { brand: brandSlug, limit: 24, sort: "newest" },
+      timeout: 8000,
+    });
+    return res.data.success ? res.data.data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchBrands(): Promise<BrandDetail[]> {
+  try {
+    const res = await axios.get<ApiResponse<BrandDetail[]>>(`${API_URL}/api/brands`, {
+      params: { isActive: true, limit: 100 },
       timeout: 8000,
     });
     return res.data.success ? res.data.data : [];
@@ -45,21 +56,24 @@ async function fetchBrandProducts(slug: string): Promise<ProductSummary[]> {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const brand = await fetchBrand(params.slug);
   if (!brand) return { title: "Brand not found" };
-  // Canonical brand landing URL - also what the sitemap emits.
+  // Canonical brand landing URL - also what the sitemap emits, and what
+  // faceted `/all-products?brand=` URLs canonicalize to.
   return brandMetadata(brand, `/brands/${brand.slug}`);
 }
 
 /**
- * Brand landing page (`/brands/[slug]`). A real, indexable URL per brand - the
- * destination the sitemap's brand entries point at (faceted
- * `/all-products?brand=` URLs are canonicalized away, so brands need their own
- * canonical home). Shows the brand header + its latest products, with a
- * "view all" deep-link into the filtered catalog grid.
+ * Brand listing (`/brands/[slug]`) - a real, indexable URL per brand with the
+ * exact same filter-rail/sort/grid/pagination UI as `/all-products` and
+ * `/category/[...slug]` (see BrandProductsClient), just with the brand
+ * locked in. Replaces the old thin "latest 24, no filters, view-all links
+ * out to /all-products" landing page - this IS the full browsing surface
+ * now, so brand cards across the site link straight here.
  */
 export default async function BrandPage({ params }: PageProps) {
-  const [brand, products] = await Promise.all([
+  const [brand, initialProducts, brands] = await Promise.all([
     fetchBrand(params.slug),
-    fetchBrandProducts(params.slug),
+    fetchInitialProducts(params.slug),
+    fetchBrands(),
   ]);
   if (!brand) notFound();
 
@@ -70,41 +84,20 @@ export default async function BrandPage({ params }: PageProps) {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-ink">
+    <div className="flex min-h-screen flex-col bg-neutral-50 text-ink">
       <Navbar />
-      <main className="container-screen flex-1 py-3">
-        <Breadcrumb items={crumbs} />
-
-        <header className="mt-2 flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{brand.name}</h1>
-          {brand.description ? (
-            <p className="max-w-prose text-sm text-neutral-700">{brand.description}</p>
-          ) : null}
-        </header>
-
-        {products.length > 0 ? (
-          <>
-            <ul className="mt-3 grid grid-cols-2 gap-1.5 md:grid-cols-3 lg:grid-cols-5">
-              {products.map((p) => (
-                <li key={p._id} className="flex flex-col">
-                  <ProductCard product={p} className="h-full w-full" />
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex justify-center">
-              <Link
-                href={`/all-products?brand=${encodeURIComponent(brand.slug)}`}
-                className="text-sm underline-offset-4 hover:underline"
-              >
-                View all {brand.name} products →
-              </Link>
-            </div>
-          </>
-        ) : (
-          <p className="mt-4 text-center text-sm text-neutral-600">
-            No products from {brand.name} yet - check back soon.
-          </p>
-        )}
+      {/* Same two-column layout as /all-products and /category: filter
+          sidebar + content panel. The breadcrumb, heading and grid all live
+          inside the client so the sidebar can stay interactive. */}
+      <main className="mx-auto flex w-full flex-1 gap-2 px-0 pb-16 pt-2 sm:px-4 sm:pb-2 md:px-6 lg:w-[82%]">
+        <BrandProductsClient
+          brandSlug={brand.slug}
+          brandName={brand.name}
+          brandDescription={brand.description}
+          crumbs={crumbs}
+          initialProducts={initialProducts}
+          brands={brands}
+        />
       </main>
       <Footer />
 

@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 import { OrganizationJsonLd, WebsiteJsonLd } from "@/components/seo";
 import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
 import { TrackingPixels } from "@/components/analytics/TrackingPixels";
-import { FloatingWidgets } from "@/components/layout";
+import { FloatingWidgets, ImageProtection } from "@/components/layout";
 import { COMPANY } from "@/lib/entity/company";
 
 const inter = Inter({
@@ -91,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           {children}
           <FloatingWidgets />
+          <ImageProtection />
         </Providers>
         <OrganizationJsonLd
           url={siteUrl}

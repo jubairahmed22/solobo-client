@@ -30,8 +30,8 @@ interface Integrations {
 async function fetchIntegrations(): Promise<Integrations> {
   try {
     const apiBase =
-      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api";
-    const res = await fetch(`${apiBase}/site-settings`, {
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:50001";
+    const res = await fetch(`${apiBase}/api/site-settings`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return {};

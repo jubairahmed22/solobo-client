@@ -78,6 +78,7 @@ const schema = z.object({
   termsAndConditions: z.string().max(50000).or(z.literal("")),
   returnPolicy: z.string().max(50000).or(z.literal("")),
   shippingDetails: z.string().max(50000).or(z.literal("")),
+  privacyPolicy: z.string().max(50000).or(z.literal("")),
   faqs: z.array(faqSchema).max(100),
   enabledPaymentMethods: z.array(z.string()),
 });
@@ -104,6 +105,7 @@ function toDefaults(s: SiteSettings | null | undefined): FormValues {
     termsAndConditions: s?.termsAndConditions ?? "",
     returnPolicy: s?.returnPolicy ?? "",
     shippingDetails: s?.shippingDetails ?? "",
+    privacyPolicy: s?.privacyPolicy ?? "",
     faqs: s?.faqs?.map((f) => ({ question: f.question, answer: f.answer })) ?? [],
     enabledPaymentMethods: s?.enabledPaymentMethods ?? ALL_PAYMENT_IDS,
   };
@@ -133,6 +135,7 @@ function toPayload(v: FormOutput): UpdateSiteSettingsBody {
     termsAndConditions: v.termsAndConditions,
     returnPolicy: v.returnPolicy,
     shippingDetails: v.shippingDetails,
+    privacyPolicy: v.privacyPolicy,
     faqs: v.faqs,
     enabledPaymentMethods: v.enabledPaymentMethods,
   };
@@ -406,7 +409,7 @@ function Form({ settings }: FormProps) {
           <section className="flex flex-col gap-[16px] rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <h2 className="text-[18px] font-semibold text-gray-900">Policy pages</h2>
             <p className="text-sm text-neutral-500">
-              Long-form content rendered on the public <strong>/terms</strong>, <strong>/returns</strong> and <strong>/shipping</strong> pages. Use the toolbar to format — headings, bold, lists and links — and the Preview tab to see exactly how it renders on the storefront.
+              Long-form content rendered on the public <strong>/terms</strong>, <strong>/returns</strong>, <strong>/shipping</strong> and <strong>/privacy</strong> pages. Use the toolbar to format — headings, bold, lists and links — and the Preview tab to see exactly how it renders on the storefront.
             </p>
             <Field label="Terms and conditions" error={errors.termsAndConditions?.message}>
               <Controller
@@ -430,6 +433,15 @@ function Form({ settings }: FormProps) {
               <Controller
                 control={control}
                 name="shippingDetails"
+                render={({ field }) => (
+                  <MarkdownEditor value={field.value} onChange={field.onChange} rows={12} />
+                )}
+              />
+            </Field>
+            <Field label="Privacy policy" error={errors.privacyPolicy?.message}>
+              <Controller
+                control={control}
+                name="privacyPolicy"
                 render={({ field }) => (
                   <MarkdownEditor value={field.value} onChange={field.onChange} rows={12} />
                 )}
@@ -644,7 +656,7 @@ function mapBackendPathToFormPath(
   }
   const direct = path as keyof FormValues;
   if (
-    ["companyName", "companyTitle", "companyLogo", "invoiceLogo", "shortDescription", "termsAndConditions", "returnPolicy", "shippingDetails"].includes(direct)
+    ["companyName", "companyTitle", "companyLogo", "invoiceLogo", "shortDescription", "termsAndConditions", "returnPolicy", "shippingDetails", "privacyPolicy"].includes(direct)
   ) {
     return direct;
   }

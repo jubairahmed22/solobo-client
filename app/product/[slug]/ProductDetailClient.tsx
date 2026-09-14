@@ -1360,7 +1360,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
           <div className="flex flex-col gap-[8px]">
             {brandName ? (
               <Link
-                href={brandSlug ? `/all-products?brand=${encodeURIComponent(brandSlug)}` : "#"}
+                href={brandSlug ? `/brands/${encodeURIComponent(brandSlug)}` : "#"}
                 className="w-fit text-[13px] font-medium uppercase tracking-wide text-neutral-400 transition-colors hover:text-neutral-600"
               >
                 {brandName}

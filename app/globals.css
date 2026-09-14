@@ -46,6 +46,24 @@
   h3 { @apply text-xl md:text-2xl font-bold tracking-tight; }
   h4 { @apply text-base md:text-lg font-semibold; }
 
+  /* Image protection — deters casual right-click-save / drag-to-desktop-
+     save / iOS long-press-save on the storefront. Paired with the
+     contextmenu + dragstart blocker in components/layout/ImageProtection.tsx
+     (mounted from the root layout). This is a deterrent, not real
+     protection: a browser must download an image's bytes to display it,
+     so DevTools' Network tab, "View Page Source", or a screenshot all
+     bypass it trivially — it only stops a casual save. Restored to normal
+     inside .admin-layout so the admin's own image uploader (which uses
+     native drag-and-drop to reorder a gallery) keeps working. */
+  img {
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+  }
+  .admin-layout img {
+    -webkit-user-drag: auto;
+    -webkit-touch-callout: default;
+  }
+
   :focus-visible {
     @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-paper;
   }

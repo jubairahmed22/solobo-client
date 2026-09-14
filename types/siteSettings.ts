@@ -86,6 +86,7 @@ export interface SiteSettings {
   termsAndConditions: string;
   returnPolicy: string;
   shippingDetails: string;
+  privacyPolicy: string;
   faqs: SiteSettingsFaq[];
   integrations?: SiteSettingsIntegrations;
   whatsappNotifications?: SiteSettingsWhatsApp;
@@ -111,6 +112,7 @@ export interface UpdateSiteSettingsBody {
   termsAndConditions?: string;
   returnPolicy?: string;
   shippingDetails?: string;
+  privacyPolicy?: string;
   faqs?: Array<{ question: string; answer: string }>;
   integrations?: Partial<SiteSettingsIntegrations>;
   whatsappNotifications?: Partial<SiteSettingsWhatsApp>;

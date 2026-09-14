@@ -17,6 +17,7 @@ function settings(partial: Partial<SiteSettings>): SiteSettings {
     termsAndConditions: "",
     returnPolicy: "",
     shippingDetails: "",
+    privacyPolicy: "",
     faqs: [],
     createdAt: "",
     updatedAt: "",

@@ -46,9 +46,9 @@ export interface BrandsDirectoryClientProps {
  *     between letters when "All" is selected) also smooth-scrolls the
  *     matching section into the viewport so the filter feels instant.
  *
- * Each brand card lands on `/all-products?brand={slug}`, which `all-products`
- * translates internally to a `brandSlug` filter so the product grid opens
- * scoped to that brand only.
+ * Each brand card lands on `/brands/{slug}` - a dedicated, indexable brand
+ * page with the exact same filter-rail/sort/grid/pagination UI as
+ * `/all-products`, just with the brand locked in (see BrandProductsClient).
  *
  * Grid sizing per the brief:
  *   xl/lg → 8 cols
@@ -215,7 +215,7 @@ export function BrandsDirectoryClient({
 function BrandCard({ brand }: { brand: BrandDetail }) {
   return (
     <Link
-      href={`/all-products?brand=${encodeURIComponent(brand.slug)}`}
+      href={`/brands/${encodeURIComponent(brand.slug)}`}
       className="group flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-paper p-3 transition-all hover:-translate-y-0.5 hover:border-ink hover:shadow-md"
     >
       {/* Logo area - square aspect so the cards line up cleanly regardless of

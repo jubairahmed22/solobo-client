@@ -262,7 +262,7 @@ function BrandsDropdown({
         {visible.map((b) => (
           <Link
             key={b.slug}
-            href={`/all-products?brand=${encodeURIComponent(b.slug)}`}
+            href={`/brands/${encodeURIComponent(b.slug)}`}
             onClick={onNavigate}
             className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 p-2 transition-colors duration-150 hover:border-neutral-400 hover:bg-neutral-50"
           >
