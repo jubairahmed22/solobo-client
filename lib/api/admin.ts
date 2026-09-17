@@ -546,6 +546,46 @@ export const adminApi = {
       apiClient.post("/admin/site-settings/whatsapp-test", { phone, config }),
     ),
 
+  /* ── Meta Platform (Facebook/Instagram/Threads/WhatsApp) ──
+   * Every credential lives in SiteSettings.meta (saved via updateSiteSettings
+   * above); these are the live test-connection / action calls the admin
+   * "Meta Platform" card's buttons hit. */
+  testMetaCapi: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/capi/test")),
+  listMetaAdAccounts: () => unwrap<MetaActionResult>(apiClient.get("/admin/meta/marketing/ad-accounts")),
+  listMetaCampaigns: () => unwrap<MetaActionResult>(apiClient.get("/admin/meta/marketing/campaigns")),
+  createMetaTestCampaign: (name?: string) =>
+    unwrap<MetaActionResult>(apiClient.post("/admin/meta/marketing/campaigns/test", { name })),
+
+  testMetaWhatsAppCloud: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/whatsapp-cloud/test")),
+  sendMetaWhatsAppCloudTest: (to: string, message?: string) =>
+    unwrap<MetaActionResult>(apiClient.post("/admin/meta/whatsapp-cloud/send-test", { to, message })),
+  testMetaMessenger: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/messenger/test")),
+  testMetaInstagramMessaging: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/instagram-messaging/test")),
+  sendMetaPlatformMessageTest: (platform: "messenger" | "instagram", recipientId: string, message?: string) =>
+    unwrap<MetaActionResult>(apiClient.post("/admin/meta/messages/send-test", { platform, recipientId, message })),
+
+  getMetaPageInfo: () => unwrap<MetaActionResult>(apiClient.get("/admin/meta/pages/info")),
+  publishMetaFacebookPost: (message: string, link?: string) =>
+    unwrap<MetaActionResult>(apiClient.post("/admin/meta/pages/posts", { message, link })),
+  listMetaPageComments: (postId: string) =>
+    unwrap<MetaActionResult>(apiClient.get("/admin/meta/pages/comments", { params: { postId } })),
+  publishMetaInstagramPost: (imageUrl: string, caption?: string) =>
+    unwrap<MetaActionResult>(apiClient.post("/admin/meta/instagram-graph/posts", { imageUrl, caption })),
+  getMetaInstagramInsights: () => unwrap<MetaActionResult>(apiClient.get("/admin/meta/instagram-graph/insights")),
+  publishMetaThreadsPost: (text: string) =>
+    unwrap<MetaActionResult>(apiClient.post("/admin/meta/threads/posts", { text })),
+  testMetaThreads: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/threads/test")),
+
+  testMetaFacebookLogin: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/login/test")),
+  listMetaBusinessAssets: () => unwrap<MetaActionResult>(apiClient.get("/admin/meta/business/assets")),
+
+  testMetaWebhooks: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/webhooks/test")),
+  testMetaLeadAds: () => unwrap<MetaActionResult>(apiClient.post("/admin/meta/lead-ads/test")),
+  listMetaLeads: (params: { page?: number; limit?: number } = {}) =>
+    unwrapWithMeta<MetaLead[]>(apiClient.get("/admin/meta/leads", { params })),
+  searchMetaAdLibrary: (q: string, country?: string) =>
+    unwrap<MetaActionResult>(apiClient.get("/admin/meta/ad-library/search", { params: { q, country } })),
+
   /* ── Customization config ──
    * Singleton patch library + enabled category slugs + add-on prices.
    * Admin write surface; public read at /api/customizations. */
