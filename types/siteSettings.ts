@@ -109,6 +109,21 @@ export interface MetaActionResult<T = unknown> {
   data?: T;
 }
 
+/** One Lead Ads submission, ingested via the shared Meta webhook's `leadgen` field. */
+export interface MetaLead {
+  _id: string;
+  leadgenId: string;
+  formId?: string;
+  adId?: string;
+  pageId?: string;
+  fields: Array<{ name: string; values: string[] }>;
+  parsed: Record<string, string>;
+  createdTime?: string;
+  status: "new" | "contacted" | "converted" | "discarded";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SiteSettings {
   _id: string;
   key: string;

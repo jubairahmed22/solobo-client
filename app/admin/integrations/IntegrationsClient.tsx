@@ -89,7 +89,7 @@ interface IntegrationCardProps {
   active?: boolean;
 }
 
-function IntegrationCard({
+export function IntegrationCard({
   logo,
   title,
   description,

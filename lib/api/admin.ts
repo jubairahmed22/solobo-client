@@ -68,7 +68,7 @@ import type {
   AdminListQuestionsParams,
   AdminListQuestionsResponse,
 } from "@/types/questions";
-import type { SiteSettings, SiteSettingsWhatsApp, UpdateSiteSettingsBody } from "@/types/siteSettings";
+import type { SiteSettings, SiteSettingsWhatsApp, UpdateSiteSettingsBody, MetaActionResult, MetaLead } from "@/types/siteSettings";
 import type {
   AdminChatSessionDetail,
   AdminChatSessionSummary,
