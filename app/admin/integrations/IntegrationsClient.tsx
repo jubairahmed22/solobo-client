@@ -22,6 +22,7 @@ import {
 } from "@/hooks/useAdmin";
 import { adminApi, AdminError } from "@/lib/api/admin";
 import type { SiteSettingsWhatsApp } from "@/types/siteSettings";
+import { MetaPlatformSection } from "./MetaPlatformSection";
 
 /* "" Analytics integrations schema "" */
 
@@ -885,6 +886,8 @@ export function IntegrationsClient() {
 
       {/* "" WhatsApp notifications "" */}
       <WhatsAppSection />
+
+      <MetaPlatformSection />
 
     </div>
   );
