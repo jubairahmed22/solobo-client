@@ -50,7 +50,7 @@ type FormValues = z.infer<typeof schema>;
 /* "" WhatsApp notifications schema "" */
 
 const waSchema = z.object({
-  provider: z.enum(["twilio", "wati", "ultramsg", "webhook", ""]),
+  provider: z.enum(["twilio", "wati", "ultramsg", "webhook", "cloudapi", ""]),
   enabled: z.boolean(),
   twilioAccountSid: z.string().trim().max(60).or(z.literal("")),
   twilioAuthToken:  z.string().trim().max(60).or(z.literal("")),
@@ -329,6 +329,7 @@ function WhatsAppSection() {
               <option value="wati">WATI (popular in South Asia)</option>
               <option value="ultramsg">UltraMsg (affordable, easy setup)</option>
               <option value="webhook">Generic webhook (custom integration)</option>
+              <option value="cloudapi">WhatsApp Business Cloud API (Meta, official)</option>
             </select>
             <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-neutral-400">
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
