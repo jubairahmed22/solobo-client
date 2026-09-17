@@ -449,6 +449,15 @@ function WhatsAppSection() {
           </>
         )}
 
+        {provider === "cloudapi" && (
+          <div className="rounded-[8px] border border-dashed border-gray-300 bg-gray-50 px-[16px] py-[14px] text-[13px] text-gray-600">
+            No separate credentials needed here - this uses the Phone Number ID and
+            Access Token already saved in the <strong>Meta Platform</strong> card below,
+            under &quot;WhatsApp Business Cloud API&quot;. Save those first, then come back
+            here and click Save to enable it for order notifications.
+          </div>
+        )}
+
         {provider ? (
           <>
             <div className="h-px bg-neutral-100" />
