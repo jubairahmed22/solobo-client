@@ -47,7 +47,7 @@ export interface SiteSettingsIntegrations {
   hotjarSiteId?: string;
 }
 
-export type WhatsAppProvider = "twilio" | "wati" | "ultramsg" | "webhook" | "";
+export type WhatsAppProvider = "twilio" | "wati" | "ultramsg" | "webhook" | "cloudapi" | "";
 
 export interface SiteSettingsWhatsApp {
   provider: WhatsAppProvider;
@@ -71,6 +71,44 @@ export interface SiteSettingsWhatsApp {
   notifyOnDelivered: boolean;
 }
 
+/**
+ * Meta (Facebook/Instagram/Threads/WhatsApp) Platform credentials - grouped
+ * exactly like Meta's own product taxonomy. Mirrors backend/src/models/
+ * SiteSettings.ts's `metaSchema`. Every sub-object is optional/partial so
+ * the admin form can save one product's credentials without touching any
+ * other's.
+ */
+export interface SiteSettingsMeta {
+  appId: string;
+  appSecret: string;
+  systemUserAccessToken: string;
+  apiVersion: string;
+
+  capi: { pixelId: string; accessToken: string; testEventCode: string };
+  marketing: { adAccountId: string; accessToken: string };
+
+  whatsapp: { phoneNumberId: string; businessAccountId: string; accessToken: string };
+  messenger: { pageId: string; pageAccessToken: string; appSecret: string; verifyToken: string };
+  instagramMessaging: { businessAccountId: string; accessToken: string };
+
+  pagesGraph: { pageId: string; pageAccessToken: string };
+  instagramGraph: { businessAccountId: string; accessToken: string };
+  threads: { userId: string; accessToken: string };
+
+  login: { appId: string; appSecret: string };
+  business: { businessManagerId: string; systemUserAccessToken: string };
+
+  webhooks: { verifyToken: string; appSecret: string };
+  leadAds: { accessToken: string };
+  adLibrary: { accessToken: string };
+}
+
+export interface MetaActionResult<T = unknown> {
+  success: boolean;
+  message: string;
+  data?: T;
+}
+
 export interface SiteSettings {
   _id: string;
   key: string;
@@ -89,6 +127,7 @@ export interface SiteSettings {
   privacyPolicy: string;
   faqs: SiteSettingsFaq[];
   integrations?: SiteSettingsIntegrations;
+  meta?: SiteSettingsMeta;
   whatsappNotifications?: SiteSettingsWhatsApp;
   enabledPaymentMethods?: string[];
   createdAt: string;
@@ -100,6 +139,12 @@ export interface SiteSettings {
  * patch (just the delivery charge, for example) without re-sending every
  * other field. Nested objects are merged sub-document-deep on the server.
  */
+type DeepPartialMeta = {
+  [K in keyof SiteSettingsMeta]?: SiteSettingsMeta[K] extends object
+    ? Partial<SiteSettingsMeta[K]>
+    : SiteSettingsMeta[K];
+};
+
 export interface UpdateSiteSettingsBody {
   companyName?: string;
   companyTitle?: string;
@@ -115,6 +160,7 @@ export interface UpdateSiteSettingsBody {
   privacyPolicy?: string;
   faqs?: Array<{ question: string; answer: string }>;
   integrations?: Partial<SiteSettingsIntegrations>;
+  meta?: DeepPartialMeta;
   whatsappNotifications?: Partial<SiteSettingsWhatsApp>;
   enabledPaymentMethods?: string[];
 }
