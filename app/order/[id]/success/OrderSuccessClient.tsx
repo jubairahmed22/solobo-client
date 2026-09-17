@@ -59,6 +59,7 @@ export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
       currency: order.currency,
       items: order.items.reduce((s, it) => s + it.qty, 0),
       coupon: order.couponCode ?? undefined,
+      productIds: order.items.map((it) => it.product),
     });
   }, [order]);
 

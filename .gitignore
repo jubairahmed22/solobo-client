@@ -1,6 +1,6 @@
 .vercel
 node_modules
-
+asdfasd
 # Per-developer local secrets (NextAuth OAuth credentials, local API URL
 # overrides, etc.) - never meant to be committed. Was accidentally tracked
 # with real Google OAuth secrets baked in; removed from tracking below.

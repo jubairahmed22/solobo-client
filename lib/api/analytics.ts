@@ -1,3 +1,4 @@
+import axios from "axios";
 import { apiClient } from "./client";
 import type { ApiResponse } from "@/types/api";
 import type {
@@ -19,10 +20,26 @@ import type {
  * bearer-token + refresh interceptor applies; the unwrap mirrors adminApi.
  */
 
+/**
+ * Unwraps the `{success, data}` envelope. A non-2xx response makes axios
+ * REJECT rather than resolve, so the catch below pulls the real
+ * `{message, code}` back out of `error.response.data` - otherwise callers
+ * only ever see axios's generic "Request failed with status code NNN"
+ * instead of the backend's actual message. See commerce.ts's unwrap for
+ * the full explanation.
+ */
 async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> {
-  const res = await promise;
-  if (res.data.success) return res.data.data;
-  throw new Error(res.data.message || "Request failed");
+  try {
+    const res = await promise;
+    if (res.data.success) return res.data.data;
+    throw new Error(res.data.message || "Request failed");
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string };
+      throw new Error(body.message || "Request failed");
+    }
+    throw err;
+  }
 }
 
 /** Drop undefined keys so the React Query cache key stays stable. */

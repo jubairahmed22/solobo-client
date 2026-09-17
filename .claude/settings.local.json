@@ -10,7 +10,6 @@
       "Bash(bash -c 'cd /Users/ascent/Documents/Developer/Projects/solobo_Jubair/Server && npx vitest run')",
       "Bash(bash -c 'cd /Users/ascent/Documents/Developer/Projects/solobo_Jubair/Server && cat package.json | grep -A2 \"\\\\\"dev\\\\\"\\\\|\\\\\"start\\\\\"\"; ls .env* 2>&1; grep -c \"MONGO\" .env 2>/dev/null')",
       "Bash(bash -c 'cd /Users/ascent/Documents/Developer/Projects/solobo_Jubair/Server && npx ts-node -r tsconfig-paths/register /private/tmp/claude-501/-Users-ascent-Documents-Developer-Projects-solobo-Jubair-solovo-client/fab33ad9-a1da-4fa3-828e-f90af91203fa/scratchpad/verify-chat-search.ts')",
-      "Bash(bash -c 'cd /Users/ascent/Documents/Developer/Projects/solobo_Jubair/Server && railway logs --build --service solobo-backend --lines 200 2>&1')",
       "Bash(bash -c 'npx vitest run')",
       "Bash(bash -c 'npx next build')"
     ]

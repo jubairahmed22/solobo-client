@@ -1,3 +1,4 @@
+import axios from "axios";
 import { apiClient } from "./client";
 import type { ApiResponse, PaginationMeta } from "@/types/api";
 import type {
@@ -26,18 +27,47 @@ export class CommerceError extends Error {
   }
 }
 
+/**
+ * Unwraps the `{success, data}` envelope. A non-2xx response makes axios
+ * REJECT rather than resolve, so a plain `await promise` here would only
+ * ever see the `res.data.success` branch on 2xx responses - any real error
+ * (404 product no longer available, 409 out of stock, ...) would skip
+ * straight past this function's own message-extraction and surface as
+ * axios's generic "Request failed with status code NNN" instead of the
+ * backend's actual message (e.g. checkout showing "Request failed with
+ * status code 404" instead of "Product not available" for a stale cart
+ * item). The catch below pulls the real `{message, code}` back out of
+ * `error.response.data` so callers (and the toasts built from them) show
+ * what actually went wrong.
+ */
 async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> {
-  const res = await promise;
-  if (res.data.success) return res.data.data;
-  throw new CommerceError(res.data.message, res.data.code ?? "ERROR");
+  try {
+    const res = await promise;
+    if (res.data.success) return res.data.data;
+    throw new CommerceError(res.data.message, res.data.code ?? "ERROR");
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string; code?: string };
+      throw new CommerceError(body.message ?? "Request failed", body.code ?? "ERROR");
+    }
+    throw err;
+  }
 }
 
 async function unwrapWithMeta<T>(
   promise: Promise<{ data: ApiResponse<T> }>,
 ): Promise<{ data: T; meta?: PaginationMeta }> {
-  const res = await promise;
-  if (res.data.success) return { data: res.data.data, meta: res.data.meta };
-  throw new CommerceError(res.data.message, res.data.code ?? "ERROR");
+  try {
+    const res = await promise;
+    if (res.data.success) return { data: res.data.data, meta: res.data.meta };
+    throw new CommerceError(res.data.message, res.data.code ?? "ERROR");
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.data) {
+      const body = err.response.data as { message?: string; code?: string };
+      throw new CommerceError(body.message ?? "Request failed", body.code ?? "ERROR");
+    }
+    throw err;
+  }
 }
 
 /* ───────────── Cart ───────────── */
