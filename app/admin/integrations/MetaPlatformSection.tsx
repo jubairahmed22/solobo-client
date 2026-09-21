@@ -22,6 +22,7 @@ import {
   Webhook,
   UserPlus,
   Search,
+  AlertTriangle,
 } from "lucide-react";
 import { Button, Input, Label } from "@/components/ui";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
@@ -107,17 +108,24 @@ function fromSettings(meta: SiteSettingsMeta | undefined): FormValues {
 
 /* ───────────────────── small building blocks ───────────────────── */
 
-function Field({
-  label, hint, ...props
-}: { label: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement> & { name: string }) {
+const Field = React.forwardRef<
+  HTMLInputElement,
+  { label: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>
+>(function Field({ label, hint, ...props }, ref) {
+  // Must forwardRef - react-hook-form's register() returns a `ref` alongside
+  // onChange/onBlur/name, and it's load-bearing: without it attached to the
+  // actual <input>, RHF can't read the field's live value at submit time and
+  // silently falls back to the default for that field. A plain (non-ref)
+  // wrapper here previously ate every field's typed value on save.
   return (
     <div className="flex flex-col gap-1">
       <Label className="text-xs text-neutral-600">{label}</Label>
-      <Input {...props} />
+      <Input ref={ref} {...props} />
       {hint ? <p className="text-[11px] text-neutral-400">{hint}</p> : null}
     </div>
   );
-}
+});
+Field.displayName = "Field";
 
 /** Generic "Test connection" / action button - runs an async call and shows the result inline. */
 function ActionButton({
@@ -211,6 +219,21 @@ export function MetaPlatformSection() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-[16px]">
+      <div className="flex flex-col gap-3 rounded-[8px] border border-amber-200 bg-amber-50 px-[16px] py-[12px] text-[13px] text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-start gap-2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+          <span>
+            <strong>Save first, then test.</strong> Every Test/Send/Publish button below checks
+            the credentials currently <em>saved</em> to the database - not what you&apos;ve just
+            typed. This form has one Save that covers every product below.
+          </span>
+        </p>
+        <Button type="submit" size="sm" disabled={!isDirty || submitting} className="shrink-0">
+          {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+          <span className={submitting ? "ml-1" : ""}>{isDirty ? "Save changes now" : "All changes saved"}</span>
+        </Button>
+      </div>
+
       <IntegrationCard
         logo={<Facebook className="h-5 w-5 text-[#1877F2]" aria-hidden />}
         title="Meta Platform"
