@@ -99,8 +99,14 @@ interface DisplayMessage extends ChatMessage {
   checkoutForm?: CheckoutForm;
 }
 
-export function ChatWidget() {
-  const [open, setOpen] = React.useState(false);
+export interface ChatWidgetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/** The assistant drawer. Opened from the floating chat launcher in FloatingWidgets. */
+export function ChatWidget({ open, onOpenChange }: ChatWidgetProps) {
+  const setOpen = onOpenChange;
   const [sessionId, setSessionId] = React.useState("");
   const [messages, setMessages] = React.useState<DisplayMessage[]>([]);
   const [input, setInput] = React.useState("");
@@ -164,18 +170,6 @@ export function ChatWidget() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Chat with our shopping assistant"
-        className={cn(
-          "fixed bottom-[76px] right-4 z-40 inline-flex h-[52px] w-[52px] items-center justify-center rounded-full text-paper shadow-lg",
-          "bg-ink transition-transform hover:scale-105 hover:shadow-xl",
-        )}
-      >
-        <Bot className="h-[26px] w-[26px]" aria-hidden />
-      </button>
-
       <Drawer open={open} onClose={() => setOpen(false)} side="right" widthClassName="w-[92vw] sm:w-[420px]">
         <div className="flex h-full flex-col">
           <header className="flex items-center gap-2 border-b border-neutral-200 px-4 py-3">

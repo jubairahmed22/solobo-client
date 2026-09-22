@@ -4,29 +4,27 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, MessageCircle, Plus, Minus, Trash2, X } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, X } from "lucide-react";
 import { Drawer } from "@/components/complex";
 import { useCartStore } from "@/store/cartStore";
-import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
 import { formatPrice } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { COMPANY } from "@/lib/entity/company";
 import { ChatWidget } from "./ChatWidget";
 
 /**
- * Storefront floating widgets - the persistent right-edge cart bubble, the
- * AI shopping-assistant chat bubble, and the bottom-right WhatsApp shortcut.
- * Mounted globally from the root layout so every page gets them with zero
- * per-page wiring.
+ * Storefront floating widgets - the persistent right-edge cart bubble and a
+ * single chat launcher. Mounted globally from the root layout so every page
+ * gets them with zero per-page wiring.
  *
  * The cart bubble shows live item count + subtotal and opens a right-side
  * Drawer with a mini-cart (image, name, price, qty stepper, remove,
- * "PROCEED" CTA). The chat bubble (`ChatWidget`) opens the same Drawer
- * pattern with a conversation that can search the catalog, answer store
- * questions, and place COD orders. The WhatsApp button deep-links to wa.me
- * with whatever number the admin configured in Site Settings → Contact.
+ * "PROCEED" CTA). The chat launcher opens a small popup offering WhatsApp
+ * (deep-links to wa.me) or the AI shopping assistant (`ChatWidget`), which
+ * opens the same Drawer pattern with a conversation that can search the
+ * catalog, answer store questions, and place COD orders.
  *
- * All three are auto-suppressed on /admin/*, /login, /register, /checkout
+ * Both are auto-suppressed on /admin/*, /login, /register, /checkout
  * and any auth route - surfaces where they'd compete with the primary
  * action or where contacting support doesn't make sense (e.g. an admin
  * already inside the dashboard).
@@ -51,8 +49,7 @@ export function FloatingWidgets() {
   return (
     <>
       <CartBubble />
-      <ChatWidget />
-      <WhatsAppBubble />
+      <ChatLauncher />
     </>
   );
 }
@@ -262,46 +259,93 @@ function CartLine({ item, onNavigate }: CartLineProps) {
   );
 }
 
-/* ─────────────────────────────────── WhatsApp bubble ─────────────────── */
+/* ─────────────────────────────────── Chat launcher ───────────────────── */
 
-/**
- * Strip every character that isn't a digit. WhatsApp's wa.me protocol
- * expects E.164 without the leading "+", so a configured value like
- * "+880 1700-123 456" needs to become "8801700123456".
- */
-function toWaNumber(raw: string | undefined): string | null {
-  if (!raw) return null;
-  const digits = raw.replace(/\D+/g, "");
-  return digits.length >= 6 ? digits : null;
-}
+const WHATSAPP_NUMBER = "8801820069556";
 
-function WhatsAppBubble() {
-  const { data: settings } = usePublicSiteSettings();
-  const number = toWaNumber(settings?.contact?.whatsapp ?? settings?.contact?.phone);
+function ChatLauncher() {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
 
-  // Don't render until we know there's a number to dial - otherwise the
-  // button is a dead click.
-  if (!number) return null;
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
-  // Pre-filled message gives the support agent helpful context out of the
-  // gate. Encoded server-side to survive the URL roundtrip.
-  const text = encodeURIComponent(
-    `Hi ${settings?.companyName ?? COMPANY.name}, I have a question about an order/product.`,
+  const waText = encodeURIComponent(
+    `Hi ${COMPANY.name}, I have a question about an order/product.`,
   );
-  const href = `https://wa.me/${number}?text=${text}`;
+  const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`;
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Chat with us on WhatsApp"
-      className={cn(
-        "fixed bottom-4 right-4 z-40 inline-flex h-[52px] w-[52px] items-center justify-center rounded-full text-paper shadow-lg",
-        "bg-[#25D366] transition-transform hover:scale-105 hover:shadow-xl",
-      )}
-    >
-      <MessageCircle className="h-[26px] w-[26px]" aria-hidden />
-    </a>
+    <>
+      <div ref={rootRef} className="fixed bottom-[76px] right-4 z-40 flex flex-col items-end gap-2">
+        {menuOpen ? (
+          <div
+            role="menu"
+            aria-label="Chat options"
+            className="w-[220px] overflow-hidden rounded-xl border border-neutral-200 bg-paper shadow-xl"
+          >
+            <a
+              role="menuitem"
+              href={waHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 hover:bg-neutral-50"
+            >
+              <Image src="/chat/whatsapp.png" alt="" width={36} height={36} className="h-[36px] w-[36px] shrink-0" />
+              <span className="flex flex-col text-left">
+                <span className="text-sm font-semibold text-ink">WhatsApp</span>
+                <span className="text-[11px] text-neutral-500">Chat with our team</span>
+              </span>
+            </a>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                setChatOpen(true);
+              }}
+              className="flex w-full items-center gap-3 border-t border-neutral-100 px-3 py-2.5 text-left hover:bg-neutral-50"
+            >
+              <Image src="/chat/ai-assistant.png" alt="" width={36} height={36} className="h-[36px] w-[36px] shrink-0" />
+              <span className="flex flex-col">
+                <span className="text-sm font-semibold text-ink">AI Assistant</span>
+                <span className="text-[11px] text-neutral-500">Ask about products & orders</span>
+              </span>
+            </button>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Chat with us"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className={cn(
+            "inline-flex h-[52px] w-[52px] items-center justify-center rounded-2xl shadow-lg",
+            "transition-transform hover:scale-105 hover:shadow-xl",
+          )}
+        >
+          <Image src="/chat/launcher.png" alt="" width={52} height={52} priority className="h-[52px] w-[52px]" />
+        </button>
+      </div>
+
+      <ChatWidget open={chatOpen} onOpenChange={setChatOpen} />
+    </>
   );
 }
