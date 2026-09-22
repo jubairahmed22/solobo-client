@@ -10,3 +10,4 @@ node_modules
 # Was accidentally committed for a while; now untracked via `git rm --cached`.
 .next
 tsconfig.tsbuildinfo
+kkkkkk
