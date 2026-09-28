@@ -27,6 +27,7 @@ import { Avatar, Badge, Button, Input } from "@/components/ui";
 import { AdminInlineSkeleton, AdminProductGridSkeleton } from "@/components/admin/Skeleton";
 import { Select } from "@/components/composed";
 import { cn } from "@/lib/utils/cn";
+import { estimateShipping } from "@/lib/utils/shipping";
 import { useUIStore } from "@/store/uiStore";
 import { useUsbScanner } from "@/hooks/useUsbScanner";
 import { BarcodeScanner } from "@/components/barcodes/BarcodeScanner";
@@ -143,24 +144,6 @@ function discountAmount(base: number, discount?: AdminManualDiscountInput | null
   if (!discount || !discount.value) return 0;
   const raw = discount.type === "percentage" ? (base * discount.value) / 100 : discount.value;
   return Math.min(Math.max(0, raw), base);
-}
-
-/**
- * Mirrors the server's site-settings-driven shipping calc (resolveShipping)
- * so the POS preview matches what the storefront checkout - and the final
- * order - will charge.
- */
-function estimateShipping(
-  district: string,
-  subtotal: number,
-  delivery?: { insideDhaka?: number; outsideDhaka?: number; freeShippingThreshold?: number },
-): number {
-  if (!district) return 0;
-  const threshold = delivery?.freeShippingThreshold ?? 0;
-  if (threshold > 0 && subtotal >= threshold) return 0;
-  return district.trim().toLowerCase() === "dhaka"
-    ? (delivery?.insideDhaka ?? 80)
-    : (delivery?.outsideDhaka ?? 130);
 }
 
 /* -- Discount editor --
@@ -1217,6 +1200,7 @@ export function PosClient() {
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("cod");
   const [markPaid, setMarkPaid] = React.useState(true);
   const [transactionId, setTransactionId] = React.useState("");
+  const [advancePayment, setAdvancePayment] = React.useState("");
   const [couponCode, setCouponCode] = React.useState("");
   const [orderDiscount, setOrderDiscount] = React.useState<AdminManualDiscountInput | null>(null);
   const [customerNote, setCustomerNote] = React.useState("");
@@ -1295,6 +1279,8 @@ export function PosClient() {
     : autoShipping;
   const orderDiscountAmount = discountAmount(subtotal, orderDiscount);
   const totalPreview = subtotal + shippingPreview - orderDiscountAmount;
+  const advancePaymentAmount = Math.max(0, Number(advancePayment) || 0);
+  const codDuePreview = Math.max(0, totalPreview - advancePaymentAmount);
 
   const validationError = (() => {
     if (lines.length === 0) return "Add at least one product";
@@ -1332,6 +1318,7 @@ export function PosClient() {
       shippingCost: shippingOverridden ? shippingPreview : undefined,
       paymentStatus: markPaid ? "paid" : "pending",
       transactionId: transactionId.trim() || undefined,
+      advancePayment: advancePaymentAmount > 0 ? advancePaymentAmount : undefined,
       couponCode: couponCode.trim().toUpperCase() || undefined,
       orderDiscount: orderDiscount ?? undefined,
       customerNote: customerNote.trim() || undefined,
@@ -1495,6 +1482,20 @@ export function PosClient() {
               </label>
             ) : null}
             <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
+              Advance payment (optional)
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={advancePayment}
+                onChange={(e) => setAdvancePayment(e.target.value)}
+                placeholder="0"
+              />
+              <span className="text-[12px] font-normal text-gray-500">
+                Deposit already collected. The rest is recorded as the amount due on delivery.
+              </span>
+            </label>
+            <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
               Coupon code (optional)
               <Input
                 value={couponCode}
@@ -1589,6 +1590,18 @@ export function PosClient() {
                     {formatMoney(totalPreview)}
                   </dd>
                 </div>
+                {advancePaymentAmount > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-gray-500">Advance paid</dt>
+                      <dd className="tabular-nums">−{formatMoney(advancePaymentAmount)}</dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="font-semibold text-gray-900">Due on delivery</dt>
+                      <dd className="font-semibold tabular-nums text-gray-900">{formatMoney(codDuePreview)}</dd>
+                    </div>
+                  </>
+                ) : null}
               </dl>
             </div>
             <p className="mt-[12px] text-[12px] text-gray-500">

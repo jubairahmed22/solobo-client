@@ -45,8 +45,12 @@ export function ChatCheckoutForm({ form, sessionId, onClose }: ChatCheckoutFormP
 
   const effectivePrice = selectedVariant?.price ?? form.price;
   const effectiveStock = hasVariants ? (selectedVariant?.stock ?? 0) : form.stock;
-  const maxQty = form.trackStock ? Math.max(1, Math.min(effectiveStock, 99)) : 99;
-  const outOfStock = form.trackStock && variantResolved && effectiveStock <= 0;
+  // Sold out doesn't block ordering (backorder) - just stop capping qty by
+  // an empty stock count, which would otherwise floor it at 1.
+  const isSoldOut = form.trackStock && variantResolved && effectiveStock <= 0;
+  const maxQty = form.trackStock
+    ? (isSoldOut ? 99 : Math.max(1, Math.min(effectiveStock, 99)))
+    : 99;
 
   const [qty, setQty] = React.useState(1);
   const [fullName, setFullName] = React.useState("");
@@ -83,7 +87,6 @@ export function ChatCheckoutForm({ form, sessionId, onClose }: ChatCheckoutFormP
   const canSubmitCod =
     !submitting &&
     variantResolved &&
-    !outOfStock &&
     fullName.trim().length >= 2 &&
     phone.trim().length >= 5 &&
     line1.trim().length >= 3 &&
@@ -196,11 +199,7 @@ export function ChatCheckoutForm({ form, sessionId, onClose }: ChatCheckoutFormP
         </div>
       ) : null}
 
-      {outOfStock ? (
-        <p className="mt-2 text-xs font-semibold text-red-600">Out of stock for this selection.</p>
-      ) : (
-        <>
-          {/* Qty stepper */}
+      {/* Qty stepper */}
           <div className="mt-2.5 flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-400">Quantity</span>
             <div className="flex h-[30px] items-center overflow-hidden rounded-lg border border-neutral-300">
@@ -312,8 +311,6 @@ export function ChatCheckoutForm({ form, sessionId, onClose }: ChatCheckoutFormP
               Continue to Checkout · {formatPrice(effectivePrice * qty, form.currency)}
             </button>
           )}
-        </>
-      )}
     </div>
   );
 }

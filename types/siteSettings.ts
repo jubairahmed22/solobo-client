@@ -24,6 +24,8 @@ export interface SiteSettingsContact {
 
 export interface SiteSettingsDelivery {
   insideDhaka: number;
+  /** Tongi, Narayanganj, Savar - see SUB_DHAKA_DISTRICTS in lib/utils/shipping.ts. */
+  subDhaka: number;
   outsideDhaka: number;
   /** Order subtotal at or above which delivery is free (0 disables). */
   freeShippingThreshold: number;

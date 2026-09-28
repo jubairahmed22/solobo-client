@@ -12,7 +12,7 @@ function settings(partial: Partial<SiteSettings>): SiteSettings {
     companyLogo: "",
     invoiceLogo: "",
     shortDescription: "",
-    delivery: { insideDhaka: 60, outsideDhaka: 120, freeShippingThreshold: 1500 },
+    delivery: { insideDhaka: 60, subDhaka: 90, outsideDhaka: 120, freeShippingThreshold: 1500 },
     contact: {},
     termsAndConditions: "",
     returnPolicy: "",

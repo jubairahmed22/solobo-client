@@ -238,6 +238,7 @@ export function useUpdateOrderPayment(id: string) {
       status: PaymentStatus;
       transactionId?: string;
       refundAmount?: number;
+      advanceAmount?: number;
     }) => adminApi.updatePayment(id, input),
     onSuccess: invalidate,
   });

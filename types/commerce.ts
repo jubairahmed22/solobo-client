@@ -195,6 +195,8 @@ export interface OrderPayment {
   paidAt?: string;
   refundedAt?: string;
   refundAmount?: number;
+  /** Advance/deposit already collected from the customer. COD amount due = order.total - advanceAmount. */
+  advanceAmount?: number;
 }
 
 export interface OrderTracking {
@@ -387,6 +389,7 @@ export interface GuestCheckoutInput {
   paymentMethod: PaymentMethod;
   /** Optional contact email for the order confirmation. */
   email?: string;
+  couponCode?: string;
   customerNote?: string;
   attribution?: CheckoutAttribution;
 }

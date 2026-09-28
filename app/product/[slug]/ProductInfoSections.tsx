@@ -78,7 +78,6 @@ export function ProductInfoSections({ product, settings, className }: ProductInf
   const categoryName =
     typeof product.category === "object" && product.category ? product.category.name : undefined;
   const sku = product.variants.find((v) => v.sku)?.sku;
-  const inStock = product.stock > 0;
   const attributes = product.attributes ?? {};
   const summary = product.description ?? product.shortDescription;
 
@@ -120,9 +119,7 @@ export function ProductInfoSections({ product, settings, className }: ProductInf
           ) : null}
           <Spec term="Price">{formatPrice(product.price, product.currency)}</Spec>
           <Spec term="Availability">
-            <span className={cn("font-semibold", inStock ? "text-green-700" : "text-red-600")}>
-              {inStock ? "In stock" : "Out of stock"}
-            </span>
+            <span className="font-semibold text-green-700">In stock</span>
           </Spec>
           {Object.entries(attributes).map(([k, v]) => (
             <Spec key={k} term={k}>{v}</Spec>
@@ -157,9 +154,12 @@ export function ProductInfoSections({ product, settings, className }: ProductInf
                 <span className={cn("inline-flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-xl", colors.bg)}>
                   <Icon className={cn("h-[16px] w-[16px]", colors.icon)} aria-hidden />
                 </span>
-                <div>
+                <div className="min-w-0">
                   <h3 className="text-[14px] font-semibold text-neutral-900">{heading}</h3>
-                  <p className="mt-[2px] text-[13px] leading-relaxed text-neutral-500">{policyContent[idx]}</p>
+                  <Markdown
+                    content={policyContent[idx]!}
+                    className="mt-[2px] text-[13px] leading-relaxed text-neutral-500"
+                  />
                 </div>
               </div>
             );
@@ -174,9 +174,10 @@ export function ProductInfoSections({ product, settings, className }: ProductInf
             {faqs.map((f, i) => (
               <div key={f._id ?? i} className="py-[12px] first:pt-0 last:pb-0">
                 <p className="text-[14px] font-semibold text-neutral-900">{f.question}</p>
-                <p className="mt-[6px] whitespace-pre-line text-[14px] leading-relaxed text-neutral-500">
-                  {f.answer}
-                </p>
+                <Markdown
+                  content={f.answer}
+                  className="mt-[6px] text-[14px] leading-relaxed text-neutral-500"
+                />
               </div>
             ))}
           </div>

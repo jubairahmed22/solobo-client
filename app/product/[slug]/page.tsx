@@ -156,7 +156,9 @@ export default async function ProductPage({ params }: PageProps) {
         url={url}
         price={product.price}
         priceCurrency={product.currency}
-        availability={product.stock > 0 ? "InStock" : "OutOfStock"}
+        // The storefront always accepts orders (backorder), so this is never
+        // anything but InStock - see ProductDetailClient's isSoldOut.
+        availability="InStock"
         ratingValue={product.ratingCount > 0 ? product.ratingAverage : undefined}
         reviewCount={product.ratingCount > 0 ? product.ratingCount : undefined}
       />

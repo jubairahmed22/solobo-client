@@ -38,8 +38,9 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const discountPct = onSale
     ? Math.round(((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
     : 0;
-  const outOfStock = product.stock <= 0;
-  const lowStock = !outOfStock && product.stock <= 5;
+  // Stock never blocks a storefront purchase - the site always accepts
+  // orders (backorder), so this only drives the "Few Left" urgency badge.
+  const lowStock = product.stock > 0 && product.stock <= 5;
   const hasRating = product.ratingCount > 0;
   const brandName =
     typeof product.brand === "object" && product.brand !== null
@@ -61,7 +62,6 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (outOfStock) return;
     if (needsVariantChoice) {
       // Size/option products go through the PDP picker.
       toast({ title: "Choose your options", description: "Pick a size to add this item" });
@@ -103,10 +103,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               alt={hero.alt ?? product.title}
               fill
               sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
-              className={cn(
-                "object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]",
-                outOfStock && "opacity-50",
-              )}
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-[11px] text-neutral-300">
@@ -126,11 +123,6 @@ export function ProductCard({ product, className }: ProductCardProps) {
                 NEW
               </span>
             )}
-            {outOfStock && (
-              <span className="rounded-sm bg-neutral-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                Sold Out
-              </span>
-            )}
             {lowStock && (
               <span className="rounded-sm bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
                 Few Left
@@ -143,16 +135,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
             <button
               type="button"
               onClick={handleAddToCart}
-              disabled={outOfStock}
-              className={cn(
-                "flex w-full items-center justify-center gap-1.5 py-3 text-[11px] font-bold uppercase tracking-widest",
-                outOfStock
-                  ? "cursor-not-allowed bg-neutral-200 text-neutral-400"
-                  : "bg-accent text-white hover:bg-accent-dark",
-              )}
+              className="flex w-full items-center justify-center gap-1.5 bg-accent py-3 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-accent-dark"
             >
               <ShoppingCart className="h-3.5 w-3.5" aria-hidden />
-              {outOfStock ? "Out of Stock" : "Add to Cart"}
+              Add to Cart
             </button>
           </div>
         </div>
@@ -228,19 +214,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
       <button
         type="button"
         onClick={handleAddToCart}
-        disabled={outOfStock}
-        aria-label={outOfStock ? "Out of stock" : `Add ${product.title} to cart`}
-        className={cn(
-          "flex h-9 w-full shrink-0 items-center justify-center gap-1.5",
-          "text-[11px] font-bold uppercase tracking-widest",
-          "transition-colors duration-150 lg:hidden",
-          outOfStock
-            ? "cursor-not-allowed bg-neutral-50 text-neutral-300"
-            : "bg-accent text-white active:bg-accent-dark",
-        )}
+        aria-label={`Add ${product.title} to cart`}
+        className="flex h-9 w-full shrink-0 items-center justify-center gap-1.5 bg-accent text-[11px] font-bold uppercase tracking-widest text-white transition-colors duration-150 active:bg-accent-dark lg:hidden"
       >
         <ShoppingCart className="h-3.5 w-3.5" aria-hidden />
-        {outOfStock ? "Sold Out" : "Add to Cart"}
+        Add to Cart
       </button>
     </div>
   );

@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   Maximize2,
   Play,
+  Truck,
 } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { Markdown, RatingStars } from "@/components/composed";
@@ -32,7 +33,13 @@ import type {
 } from "@/types/catalog";
 import type { PublicCustomizationConfig } from "@/types/customization";
 import { usePublicCustomizations } from "@/hooks/useCustomizations";
-import type { SiteSettingsDelivery } from "@/types/siteSettings";
+import type { SiteSettingsDelivery, SiteSettingsContact } from "@/types/siteSettings";
+
+/** wa.me expects E.164 digits with no leading "+" - strip everything else. */
+function toWaHref(raw: string | undefined): string | null {
+  const digits = raw?.replace(/\D+/g, "");
+  return digits && digits.length >= 6 ? `https://wa.me/${digits}` : null;
+}
 
 function formatPrice(amount: number, currency: string): string {
   if (currency === "BDT") return `Tk ${amount.toLocaleString("en-IN")}`;
@@ -245,6 +252,37 @@ interface JerseyPersonalization {
   numberEnabled: boolean;
   number: string;
   patches: string[];
+}
+
+/** Shown under the personalisation form on any customizable product. */
+function CustomizationNotice({ contact }: { contact?: SiteSettingsContact | null }) {
+  const waHref = toWaHref(contact?.whatsapp);
+  const fbHref = contact?.facebook || null;
+  const igHref = contact?.instagram || null;
+
+  const link = (href: string | null, label: string) =>
+    href ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-ink underline underline-offset-2"
+      >
+        {label}
+      </a>
+    ) : (
+      <span className="font-semibold text-ink">{label}</span>
+    );
+
+  return (
+    <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-900">
+      <Info className="mt-0.5 h-[15px] w-[15px] shrink-0 text-amber-500" aria-hidden />
+      <p>
+        An advance payment of Tk 500 is required for customized orders. For support, contact us
+        via {link(waHref, "WhatsApp")}, {link(fbHref, "Facebook")}, or {link(igHref, "Instagram")}.
+      </p>
+    </div>
+  );
 }
 
 function JerseyCustomizer({
@@ -564,7 +602,10 @@ function JerseyCustomizer({
 export interface ProductDetailClientProps {
   product: ProductDetail;
   customizationConfig?: PublicCustomizationConfig | null;
-  siteSettings?: { delivery?: SiteSettingsDelivery | null } | null;
+  siteSettings?: {
+    delivery?: SiteSettingsDelivery | null;
+    contact?: SiteSettingsContact | null;
+  } | null;
   className?: string;
 }
 
@@ -791,7 +832,10 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
   const discountPct = onSale
     ? Math.round(((effectiveCompareAt - effectivePrice) / effectiveCompareAt) * 100)
     : 0;
-  const outOfStock = product.trackStock && effectiveStock <= 0;
+  // The storefront never refuses an order for lack of stock (backorder) -
+  // effectiveStock still drives the qty cap and "N left" copy below, it just
+  // no longer disables the buy buttons or shows a "sold out" state.
+  const isSoldOut = product.trackStock && effectiveStock <= 0;
 
   // How many of this exact variant is already sitting in the local cart.
   // Used to prevent adding beyond available stock.
@@ -806,8 +850,11 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
       )?.qty ?? 0
     );
   });
+  // Once actually sold out, stop capping qty by stock - a backorder can't
+  // be "limited to 0 remaining". Otherwise keep the real cap so buyers don't
+  // add more than the seller can currently fulfil.
   const remaining = product.trackStock
-    ? Math.max(0, effectiveStock - existingCartQty)
+    ? (isSoldOut ? 99 : Math.max(0, effectiveStock - existingCartQty))
     : 99;
 
   // Reset qty to 1 when the matched variant changes so stale qty doesn't carry over
@@ -963,9 +1010,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
     setSelectedOptions((prev) => ({ ...prev, [axis]: value }));
 
   const onAddToCart = () => {
-    if (outOfStock) return;
-
-    if (product.trackStock) {
+    if (product.trackStock && !isSoldOut) {
       if (remaining <= 0) {
         toast({
           title: "Maximum quantity reached",
@@ -1044,7 +1089,6 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
   };
 
   const onBuyNow = () => {
-    if (outOfStock) return;
     onAddToCart();
     router.push("/checkout");
   };
@@ -1497,12 +1541,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
           <div ref={ctaRef} className="flex flex-col gap-[12px] border-t border-neutral-100 pt-[16px]">
 
             {/* Stock */}
-            {outOfStock ? (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-red-500">
-                <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
-                Out of stock
-              </span>
-            ) : effectiveStock < 10 && product.trackStock ? (
+            {!isSoldOut && effectiveStock < 10 && product.trackStock ? (
               <span className="flex items-center gap-1.5 text-sm font-medium text-amber-600">
                 <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden />
                 Only {effectiveStock} left
@@ -1513,6 +1552,21 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
                 In stock
               </span>
             )}
+
+            {/* Delivery charges */}
+            <div className="flex items-start gap-2 rounded-lg bg-neutral-50 px-3 py-2.5 text-[12px] text-neutral-600">
+              <Truck className="mt-0.5 h-[15px] w-[15px] shrink-0 text-neutral-400" aria-hidden />
+              <div className="flex flex-col gap-0.5">
+                <span className="font-semibold text-neutral-900">Delivery charge</span>
+                <span>
+                  Inside Dhaka: <span className="font-medium text-ink">{formatPrice(siteSettings?.delivery?.insideDhaka ?? 70, product.currency)}</span>
+                  {" · "}
+                  Sub Dhaka (Tongi, Narayanganj, Savar): <span className="font-medium text-ink">{formatPrice(siteSettings?.delivery?.subDhaka ?? 100, product.currency)}</span>
+                  {" · "}
+                  Outside Dhaka: <span className="font-medium text-ink">{formatPrice(siteSettings?.delivery?.outsideDhaka ?? 130, product.currency)}</span>
+                </span>
+              </div>
+            </div>
 
             {/* Qty stepper */}
             <div className="flex items-center gap-[12px]">
@@ -1559,19 +1613,17 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
             <button
               type="button"
               onClick={onAddToCart}
-              disabled={outOfStock}
-              className="flex h-[48px] w-full items-center justify-center gap-[8px] rounded-lg bg-accent text-[15px] font-semibold text-white transition-all hover:bg-accent-dark active:scale-[0.99] disabled:opacity-40"
+              className="flex h-[48px] w-full items-center justify-center gap-[8px] rounded-lg bg-accent text-[15px] font-semibold text-white transition-all hover:bg-accent-dark active:scale-[0.99]"
             >
               <ShoppingCart className="h-[18px] w-[18px]" aria-hidden />
-              {outOfStock ? "Out of stock" : "Add to cart"}
+              Add to cart
             </button>
 
             {/* Buy now - Flowbite alternative */}
             <button
               type="button"
               onClick={onBuyNow}
-              disabled={outOfStock}
-              className="flex h-[48px] w-full items-center justify-center rounded-lg border border-neutral-300 bg-white text-[15px] font-semibold text-neutral-900 transition-all hover:bg-neutral-100 active:scale-[0.99] disabled:opacity-40"
+              className="flex h-[48px] w-full items-center justify-center rounded-lg border border-neutral-300 bg-white text-[15px] font-semibold text-neutral-900 transition-all hover:bg-neutral-100 active:scale-[0.99]"
             >
               Buy now
             </button>
@@ -1645,6 +1697,7 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
                 showName={allowName}
                 showNumber={allowNumber}
               />
+              <CustomizationNotice contact={siteSettings?.contact} />
             </div>
           ) : null}
 
@@ -1676,11 +1729,10 @@ export function ProductDetailClient({ product, customizationConfig, siteSettings
           <button
             type="button"
             onClick={onAddToCart}
-            disabled={outOfStock}
-            className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-xl bg-accent px-4 text-[12px] font-bold uppercase tracking-wide text-paper transition-all hover:bg-accent/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[40px] shrink-0 items-center gap-1.5 rounded-xl bg-accent px-4 text-[12px] font-bold uppercase tracking-wide text-paper transition-all hover:bg-accent/90 active:scale-[0.98]"
           >
             <ShoppingCart className="h-4 w-4" aria-hidden />
-            {outOfStock ? "Out of stock" : "Add to Cart"}
+            Add to Cart
           </button>
         </div>
       </div>

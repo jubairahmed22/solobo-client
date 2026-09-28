@@ -195,6 +195,7 @@ export const adminApi = {
       status: PaymentStatus;
       transactionId?: string;
       refundAmount?: number;
+      advanceAmount?: number;
     },
   ) =>
     unwrap<AdminOrderDetail>(

@@ -66,6 +66,7 @@ const schema = z.object({
   invoiceLogo: z.string().trim().url("Must be a URL").or(z.literal("")),
   shortDescription: z.string().trim().max(500).or(z.literal("")),
   insideDhaka: z.coerce.number().int().nonnegative("Must be 0 or more").max(100000),
+  subDhaka: z.coerce.number().int().nonnegative("Must be 0 or more").max(100000),
   outsideDhaka: z.coerce.number().int().nonnegative("Must be 0 or more").max(100000),
   freeShippingThreshold: z.coerce.number().int().nonnegative("Must be 0 or more").max(10000000),
   contactEmail: z.string().trim().email("Invalid email").or(z.literal("")),
@@ -80,6 +81,7 @@ const schema = z.object({
   shippingDetails: z.string().max(50000).or(z.literal("")),
   privacyPolicy: z.string().max(50000).or(z.literal("")),
   faqs: z.array(faqSchema).max(100),
+  announcementItems: z.array(announcementItemSchema).max(20),
   enabledPaymentMethods: z.array(z.string()),
 });
 type FormValues = z.input<typeof schema>;
@@ -93,6 +95,7 @@ function toDefaults(s: SiteSettings | null | undefined): FormValues {
     invoiceLogo: s?.invoiceLogo ?? "",
     shortDescription: s?.shortDescription ?? "",
     insideDhaka: s?.delivery?.insideDhaka ?? 0,
+    subDhaka: s?.delivery?.subDhaka ?? 0,
     outsideDhaka: s?.delivery?.outsideDhaka ?? 0,
     freeShippingThreshold: s?.delivery?.freeShippingThreshold ?? 0,
     contactEmail: s?.contact?.email ?? "",
@@ -107,6 +110,7 @@ function toDefaults(s: SiteSettings | null | undefined): FormValues {
     shippingDetails: s?.shippingDetails ?? "",
     privacyPolicy: s?.privacyPolicy ?? "",
     faqs: s?.faqs?.map((f) => ({ question: f.question, answer: f.answer })) ?? [],
+    announcementItems: (s?.announcementBar?.items ?? []).map((text) => ({ text })),
     enabledPaymentMethods: s?.enabledPaymentMethods ?? ALL_PAYMENT_IDS,
   };
 }
@@ -120,6 +124,7 @@ function toPayload(v: FormOutput): UpdateSiteSettingsBody {
     shortDescription: v.shortDescription,
     delivery: {
       insideDhaka: v.insideDhaka,
+      subDhaka: v.subDhaka,
       outsideDhaka: v.outsideDhaka,
       freeShippingThreshold: v.freeShippingThreshold,
     },
@@ -137,6 +142,7 @@ function toPayload(v: FormOutput): UpdateSiteSettingsBody {
     shippingDetails: v.shippingDetails,
     privacyPolicy: v.privacyPolicy,
     faqs: v.faqs,
+    announcementBar: { items: v.announcementItems.map((i) => i.text) },
     enabledPaymentMethods: v.enabledPaymentMethods,
   };
 }
@@ -195,13 +201,20 @@ function Form({ settings }: FormProps) {
     move: moveFaq,
   } = useFieldArray({ control, name: "faqs" });
 
-  const [watchThreshold, watchInside, watchOutside] = useWatch({
+  const {
+    fields: announcementFields,
+    append: appendAnnouncement,
+    remove: removeAnnouncement,
+  } = useFieldArray({ control, name: "announcementItems" });
+
+  const [watchThreshold, watchInside, watchSub, watchOutside] = useWatch({
     control,
-    name: ["freeShippingThreshold", "insideDhaka", "outsideDhaka"],
+    name: ["freeShippingThreshold", "insideDhaka", "subDhaka", "outsideDhaka"],
   });
   const enabledMethods = useWatch({ control, name: "enabledPaymentMethods" }) ?? ALL_PAYMENT_IDS;
   const previewThreshold = Number(watchThreshold) || 0;
   const previewInside = Number(watchInside) || 0;
+  const previewSub = Number(watchSub) || 0;
   const previewOutside = Number(watchOutside) || 0;
 
   const onSubmit = handleSubmit(async (raw) => {
@@ -331,9 +344,16 @@ function Form({ settings }: FormProps) {
                 Flat rates applied at checkout based on the customer&apos;s district. Set a free delivery threshold to incentivise larger orders — the cart progress bar and product page nudge update automatically.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Inside Dhaka (৳)" error={errors.insideDhaka?.message}>
                 <Input type="number" min={0} step={1} invalid={!!errors.insideDhaka} {...register("insideDhaka")} />
+              </Field>
+              <Field
+                label="Sub Dhaka (৳)"
+                error={errors.subDhaka?.message}
+                hint="Tongi, Narayanganj, Savar."
+              >
+                <Input type="number" min={0} step={1} invalid={!!errors.subDhaka} {...register("subDhaka")} />
               </Field>
               <Field label="Outside Dhaka (৳)" error={errors.outsideDhaka?.message}>
                 <Input type="number" min={0} step={1} invalid={!!errors.outsideDhaka} {...register("outsideDhaka")} />
@@ -391,6 +411,14 @@ function Form({ settings }: FormProps) {
                     Inside Dhaka:{" "}
                     <span className="font-medium text-ink">
                       {previewInside > 0 ? `Tk ${previewInside.toLocaleString("en-IN")}` : "Free"}
+                    </span>
+                  </span>
+                  <span>·</span>
+                  <span>·</span>
+                  <span>
+                    Sub Dhaka:{" "}
+                    <span className="font-medium text-ink">
+                      {previewSub > 0 ? `Tk ${previewSub.toLocaleString("en-IN")}` : "Free"}
                     </span>
                   </span>
                   <span>·</span>
@@ -554,6 +582,60 @@ function Form({ settings }: FormProps) {
             </Field>
           </section>
 
+          {/* Announcement bar */}
+          <section className="flex flex-col gap-3 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-[18px] font-semibold text-gray-900">Announcement bar</h2>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Scrolling ticker text shown in the footer. A free-delivery line is added automatically when a threshold is set above.
+                </p>
+              </div>
+            </div>
+            {announcementFields.length === 0 ? (
+              <p className="rounded-[8px] border border-dashed border-gray-300 p-[12px] text-center text-[13px] text-gray-400">
+                No custom items yet - default storefront copy is shown.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {announcementFields.map((field, i) => (
+                  <li key={field.id} className="flex items-start gap-2">
+                    <div className="flex-1">
+                      <Input
+                        invalid={!!errors.announcementItems?.[i]?.text}
+                        placeholder="e.g. Cash on delivery available"
+                        {...register(`announcementItems.${i}.text` as const)}
+                      />
+                      {errors.announcementItems?.[i]?.text?.message ? (
+                        <span className="mt-1 block text-xs text-ink">
+                          {errors.announcementItems[i]?.text?.message}
+                        </span>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAnnouncement(i)}
+                      className="mt-1 inline-flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-[8px] border border-gray-300 bg-white text-gray-500 transition duration-75 hover:bg-red-100 hover:text-red-600"
+                      aria-label="Remove item"
+                    >
+                      <Trash2 className="h-[16px] w-[16px]" aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => appendAnnouncement({ text: "" })}
+              disabled={announcementFields.length >= 20}
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              <span className="ml-1.5">Add item</span>
+            </Button>
+          </section>
+
           {/* Payment methods */}
           <section className="flex flex-col gap-3 rounded-[8px] border border-gray-200 bg-white p-[16px] shadow-sm">
             <div>
@@ -629,12 +711,20 @@ const textareaClass =
 
 function mapBackendPathToFormPath(
   path: string,
-): keyof FormValues | `faqs.${number}.${"question" | "answer"}` | null {
+):
+  | keyof FormValues
+  | `faqs.${number}.${"question" | "answer"}`
+  | `announcementItems.${number}.text`
+  | null {
   if (path.startsWith("delivery.")) {
     const k = path.slice("delivery.".length);
-    if (k === "insideDhaka" || k === "outsideDhaka" || k === "freeShippingThreshold") {
+    if (k === "insideDhaka" || k === "subDhaka" || k === "outsideDhaka" || k === "freeShippingThreshold") {
       return k as keyof FormValues;
     }
+  }
+  if (path.startsWith("announcementBar.items.")) {
+    const m = path.match(/^announcementBar\.items\.(\d+)$/);
+    if (m) return `announcementItems.${Number(m[1])}.text`;
   }
   if (path.startsWith("contact.")) {
     const k = path.slice("contact.".length);

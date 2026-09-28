@@ -841,6 +841,8 @@ export interface AdminCreatePosOrderInput {
   shippingCost?: number;
   paymentStatus?: "pending" | "paid";
   transactionId?: string;
+  /** Advance/deposit collected at sale time. COD amount due = total - advancePayment. */
+  advancePayment?: number;
   couponCode?: string;
   /** Order-wide manual discount, on top of any per-line discounts and independent of a coupon. */
   orderDiscount?: AdminManualDiscountInput;

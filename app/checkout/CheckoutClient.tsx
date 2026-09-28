@@ -24,10 +24,13 @@ import {
   useMergeCart,
   useUpdateCartItem,
   useRemoveCartItem,
+  useApplyCoupon,
+  useRemoveCoupon,
 } from "@/hooks/useCommerce";
 import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
 import { usePublicCustomizations } from "@/hooks/useCustomizations";
 import { deriveAddOns } from "@/lib/utils/cartAddOns";
+import { estimateShipping } from "@/lib/utils/shipping";
 import type {
   Address,
   AddressInput,
@@ -184,6 +187,8 @@ export function CheckoutClient() {
   const checkoutMut = useCheckout();
   const guestCheckoutMut = useGuestCheckout();
   const mergeMut = useMergeCart();
+  const applyCouponMut = useApplyCoupon();
+  const removeCouponMut = useRemoveCoupon();
 
   // Local-cart fallback. If the server cart is empty (or still loading the
   // login-merge), the local Zustand cart is the source of truth for what the
@@ -215,6 +220,37 @@ export function CheckoutClient() {
       removeItemMut.mutate(itemId);
     }
   };
+
+  const canApplyCouponLive = isAuthed && !usingLocal;
+  const onApplyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) return;
+    if (canApplyCouponLive) {
+      try {
+        await applyCouponMut.mutateAsync(code);
+        toast({ title: "Coupon applied", tone: "success" });
+        setCouponInput("");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not apply coupon";
+        toast({ title: "Coupon failed", description: message, tone: "error" });
+      }
+      return;
+    }
+    // No server cart to validate against yet - hold it and send it with the
+    // order itself, same as guest checkout always has to.
+    setManualCouponCode(code.toUpperCase());
+    toast({
+      title: "Coupon code saved",
+      description: "It'll be applied when you place your order.",
+      tone: "info",
+    });
+    setCouponInput("");
+  };
+  const onRemoveCoupon = () => {
+    if (appliedCoupon) removeCouponMut.mutate();
+    setManualCouponCode(null);
+  };
+
   const cart: ServerCart | undefined = usingLocal
     ? buildLocalCartShim(localItems)
     : serverCart;
@@ -222,6 +258,15 @@ export function CheckoutClient() {
   const [selectedAddressId, setSelectedAddressId] = React.useState<string | "new" | null>(null);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>("cod");
   const [customerNote, setCustomerNote] = React.useState("");
+
+  // Coupon: when a server cart already exists (authed, synced), "Apply"
+  // validates it live via the same endpoint the cart page uses, so the
+  // discount shown here is real. Otherwise (guest, or a local cart not yet
+  // synced to the server) there's no cart to validate against yet - the
+  // code is held here and sent straight to checkout, which validates it for
+  // real when the order is placed.
+  const [couponInput, setCouponInput] = React.useState("");
+  const [manualCouponCode, setManualCouponCode] = React.useState<string | null>(null);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
@@ -310,6 +355,7 @@ export function CheckoutClient() {
           shippingAddress: toAddressInput(values),
           paymentMethod,
           email: values.email || undefined,
+          couponCode: manualCouponCode ?? undefined,
           customerNote: customerNote || undefined,
           attribution: getCheckoutAttribution(),
         });
@@ -391,6 +437,7 @@ export function CheckoutClient() {
         body = {
           shippingAddressId: selectedAddressId,
           paymentMethod,
+          couponCode: manualCouponCode ?? undefined,
           customerNote: customerNote || undefined,
           attribution,
         };
@@ -398,6 +445,7 @@ export function CheckoutClient() {
         body = {
           shippingAddress: toAddressInput(values),
           paymentMethod,
+          couponCode: manualCouponCode ?? undefined,
           customerNote: customerNote || undefined,
           saveAddress: values.saveAddress,
           attribution,
@@ -471,6 +519,12 @@ export function CheckoutClient() {
         cart={cart}
         appliedCoupon={appliedCoupon}
         couponError={couponError}
+        manualCouponCode={manualCouponCode}
+        couponInput={couponInput}
+        onCouponInputChange={setCouponInput}
+        onApplyCoupon={onApplyCoupon}
+        onRemoveCoupon={onRemoveCoupon}
+        applyingCoupon={applyCouponMut.isPending}
         subtotal={subtotal}
         discount={discount}
         shippingCost={shippingCost}
@@ -736,6 +790,13 @@ interface OrderSummaryProps {
   cart: ServerCart;
   appliedCoupon: AppliedCoupon | null;
   couponError: { code: CartCouponRejectionCode; message: string } | null;
+  /** A code typed on this page that hasn't gone through a server cart yet - sent with the order itself. */
+  manualCouponCode: string | null;
+  couponInput: string;
+  onCouponInputChange: (value: string) => void;
+  onApplyCoupon: () => void;
+  onRemoveCoupon: () => void;
+  applyingCoupon: boolean;
   subtotal: number;
   discount: number;
   shippingCost: number;
@@ -751,6 +812,12 @@ function OrderSummary({
   cart,
   appliedCoupon,
   couponError,
+  manualCouponCode,
+  couponInput,
+  onCouponInputChange,
+  onApplyCoupon,
+  onRemoveCoupon,
+  applyingCoupon,
   subtotal,
   discount,
   shippingCost,
@@ -827,18 +894,69 @@ function OrderSummary({
 
       <div className="flex flex-col gap-1.5 border-t border-gray-100 pt-3 text-sm">
         <Row label="Subtotal" value={formatPrice(subtotal, cart.currency)} />
+
+        {/* Coupon */}
         {appliedCoupon ? (
-          <Row
-            label={`Coupon (${appliedCoupon.code})`}
-            value={`−${formatPrice(discount, cart.currency)}`}
-          />
-        ) : cart.couponCode && couponError ? (
-          <Row
-            label={`Coupon (${cart.couponCode})`}
-            value={couponError.message}
-            muted
-          />
-        ) : null}
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <Row
+                label={`Coupon (${appliedCoupon.code})`}
+                value={`−${formatPrice(discount, cart.currency)}`}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onRemoveCoupon}
+              className="shrink-0 text-xs text-gray-400 underline underline-offset-2 hover:text-accent"
+            >
+              Remove
+            </button>
+          </div>
+        ) : manualCouponCode ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <Row label={`Coupon (${manualCouponCode})`} value="Applied at checkout" muted />
+            </div>
+            <button
+              type="button"
+              onClick={onRemoveCoupon}
+              className="shrink-0 text-xs text-gray-400 underline underline-offset-2 hover:text-accent"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            {cart.couponCode && couponError ? (
+              <span className="flex-1 text-xs text-red-500">
+                {cart.couponCode}: {couponError.message}
+              </span>
+            ) : (
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => onCouponInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onApplyCoupon();
+                  }
+                }}
+                placeholder="Coupon code"
+                className="h-8 min-w-0 flex-1 rounded-md border border-gray-300 px-2 text-xs uppercase text-gray-900 placeholder:normal-case placeholder:text-gray-400 focus:border-accent focus:outline-none"
+              />
+            )}
+            <button
+              type="button"
+              onClick={onApplyCoupon}
+              disabled={!couponInput.trim() || applyingCoupon}
+              className="h-8 shrink-0 rounded-md border border-gray-300 px-2.5 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {applyingCoupon ? "…" : "Apply"}
+            </button>
+          </div>
+        )}
+
         {isFreeDelivery ? (
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Shipping</span>
@@ -915,17 +1033,6 @@ function AddOnBreakdown({
 }
 
 /* ───────────────────── helpers ───────────────────── */
-
-function estimateShipping(
-  district?: string,
-  subtotal = 0,
-  delivery?: { insideDhaka?: number; outsideDhaka?: number; freeShippingThreshold?: number },
-): number {
-  const threshold = delivery?.freeShippingThreshold ?? 0;
-  if (threshold > 0 && subtotal >= threshold) return 0;
-  const isDhaka = district?.trim().toLowerCase() === "dhaka";
-  return isDhaka ? (delivery?.insideDhaka ?? 80) : (delivery?.outsideDhaka ?? 130);
-}
 
 function getDistrictFromSelection(
   addresses: Address[] | undefined,

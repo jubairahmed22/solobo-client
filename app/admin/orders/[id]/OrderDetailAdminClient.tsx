@@ -269,18 +269,25 @@ function PaymentActions({ order }: { order: AdminOrderDetail }) {
   const [refundAmount, setRefundAmount] = React.useState<string>(
     order.payment.refundAmount ? String(order.payment.refundAmount) : "",
   );
+  const [advanceAmount, setAdvanceAmount] = React.useState<string>(
+    order.payment.advanceAmount ? String(order.payment.advanceAmount) : "",
+  );
 
   React.useEffect(() => {
     setStatus(order.payment.status);
     setTransactionId(order.payment.transactionId ?? "");
     setRefundAmount(order.payment.refundAmount ? String(order.payment.refundAmount) : "");
-  }, [order.payment.status, order.payment.transactionId, order.payment.refundAmount]);
+    setAdvanceAmount(order.payment.advanceAmount ? String(order.payment.advanceAmount) : "");
+  }, [order.payment.status, order.payment.transactionId, order.payment.refundAmount, order.payment.advanceAmount]);
 
   const update = useUpdateOrderPayment(order._id);
   const dirty =
     status !== order.payment.status ||
     transactionId !== (order.payment.transactionId ?? "") ||
-    (status === "refunded" && refundAmount !== (order.payment.refundAmount ? String(order.payment.refundAmount) : ""));
+    (status === "refunded" && refundAmount !== (order.payment.refundAmount ? String(order.payment.refundAmount) : "")) ||
+    advanceAmount !== (order.payment.advanceAmount ? String(order.payment.advanceAmount) : "");
+
+  const codDue = Math.max(0, order.total - (Number(advanceAmount) || 0));
 
   const onSave = async () => {
     try {
@@ -288,6 +295,7 @@ function PaymentActions({ order }: { order: AdminOrderDetail }) {
         status,
         transactionId: transactionId.trim() || undefined,
         refundAmount: status === "refunded" && refundAmount ? Number(refundAmount) : undefined,
+        advanceAmount: advanceAmount ? Number(advanceAmount) : 0,
       });
       toast({ title: "Payment updated", tone: "success" });
     } catch (err) { toast({ title: err instanceof AdminError ? err.message : "Couldn't update payment", tone: "error" }); }
@@ -327,6 +335,23 @@ function PaymentActions({ order }: { order: AdminOrderDetail }) {
             <span className={fieldLabel}>Refund amount ({order.currency})</span>
             <Input type="number" min={0} step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} placeholder={String(order.total)} />
           </label>
+        ) : null}
+        <label className="flex flex-col gap-[6px]">
+          <span className={fieldLabel}>Advance payment ({order.currency})</span>
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            value={advanceAmount}
+            onChange={(e) => setAdvanceAmount(e.target.value)}
+            placeholder="0"
+          />
+        </label>
+        {order.payment.method === "cod" ? (
+          <div className="flex items-center justify-between rounded-[8px] border border-gray-100 bg-gray-50 px-[12px] py-[8px] text-[13px]">
+            <span className="text-gray-500">COD amount due</span>
+            <span className="font-semibold text-gray-900">{formatMoney(codDue, order.currency)}</span>
+          </div>
         ) : null}
         {/* Flowbite primary button */}
         <button
