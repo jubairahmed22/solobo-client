@@ -6,6 +6,7 @@ import type {
   AddressInput,
   CartEnvelope,
   AddCartItemInput,
+  CouponPreview,
   DecideReturnInput,
   MergeCartItem,
   Order,
