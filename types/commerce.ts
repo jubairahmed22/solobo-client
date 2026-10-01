@@ -143,6 +143,24 @@ export interface MergeCartItem {
   options?: Record<string, string>;
 }
 
+/**
+ * Response from the public /orders/preview-coupon check - the same
+ * validateCoupon engine behind /cart/coupon and checkout itself, just
+ * read-only and usable without a server cart (guest, or local cart not yet
+ * synced). `discount` is the real, already-rounded-and-capped number that
+ * will apply if the code is submitted with the order.
+ */
+export interface CouponPreview {
+  code: string;
+  type: "percent" | "flat";
+  value: number;
+  scope: "platform" | "seller";
+  discount: number;
+  eligibleSubtotal: number;
+  subtotal: number;
+  currency: string;
+}
+
 /* ───────────── Order ───────────── */
 
 export type OrderStatus =
