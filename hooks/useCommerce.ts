@@ -15,6 +15,12 @@ import type {
   RequestReturnInput,
 } from "@/types/commerce";
 
+/** Shape of the one mutation argument previewCoupon's mutationFn needs. */
+interface PreviewCouponArgs {
+  items: MergeCartItem[];
+  code: string;
+}
+
 export const commerceKeys = {
   cart: ["commerce", "cart"] as const,
   addresses: ["commerce", "addresses"] as const,
