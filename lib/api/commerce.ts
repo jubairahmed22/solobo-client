@@ -122,6 +122,16 @@ export const orderApi = {
   guestCheckout: (input: GuestCheckoutInput) =>
     unwrap<Order>(apiClient.post("/orders/guest-checkout", input)),
 
+  /**
+   * Public, read-only coupon check for a guest/local cart - no server cart
+   * required. Throws (CommerceError) with the backend's rejection message
+   * when the code doesn't apply, same as cartApi.applyCoupon.
+   */
+  previewCoupon: (items: MergeCartItem[], couponCode: string) =>
+    unwrap<CouponPreview>(
+      apiClient.post("/orders/preview-coupon", { items, couponCode }),
+    ),
+
   list: (params?: OrderListQuery) =>
     unwrapWithMeta<Order[]>(apiClient.get("/orders", { params })),
 
