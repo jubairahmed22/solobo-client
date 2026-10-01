@@ -134,20 +134,33 @@ function joinAddress(addr: Address): string {
 }
 
 /**
- * Real "cash to collect on delivery" - this store keeps no partial-payment
- * ledger, so once `payment.status` flips to "paid" nothing further is owed.
- * Prefers the courier's own dispatch instruction (`courier.codAmount`,
- * which Pathao may have adjusted) when it's available, falling back to the
- * order total for undispatched/non-courier COD orders. Returns null for
- * non-COD orders (not applicable, not zero).
+ * Real "cash to collect on delivery". Once `payment.status` flips to "paid"
+ * nothing further is owed. Otherwise this is the order total minus whatever
+ * advance/deposit has already been collected (POS sale or added later on
+ * the order detail page) - see Order model's `payment.advanceAmount` and
+ * the matching subtraction in courier.service.ts's dispatchOrder, which is
+ * what actually tells Pathao how much to collect at the door.
+ *
+ * Prefers the courier's own dispatch instruction (`courier.codAmount`) when
+ * the order has already been dispatched - that's the number Pathao was
+ * actually told to collect, already advance-adjusted at dispatch time, and
+ * stays correct even if the advance is edited afterward (the live order
+ * doesn't retroactively change what's printed on an already-issued
+ * consignment). Falls back to a live total-minus-advance calculation for
+ * undispatched/non-courier COD orders. Returns null for non-COD orders (not
+ * applicable, not zero).
  */
 function codAmountFor(
-  order: { total: number; payment: { method: string; status: PaymentStatus } },
+  order: {
+    total: number;
+    payment: { method: string; status: PaymentStatus; advanceAmount?: number };
+  },
   courierCodAmount?: number,
 ): number | null {
   if (order.payment.method !== "cod") return null;
   if (order.payment.status === "paid") return 0;
-  return courierCodAmount ?? order.total;
+  if (courierCodAmount !== undefined) return courierCodAmount;
+  return Math.max(0, order.total - (order.payment.advanceAmount ?? 0));
 }
 
 /** Size/color-style variant axes only - personalisation keys excluded. */
