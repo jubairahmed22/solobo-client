@@ -72,6 +72,7 @@ export function CustomerInvoiceClient({ orderId }: { orderId: string }) {
     discount: order.discount,
     total: order.total,
     currency: order.currency,
+    advancePaid: order.payment.advanceAmount,
   };
 
   return (

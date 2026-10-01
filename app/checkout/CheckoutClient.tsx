@@ -26,6 +26,7 @@ import {
   useRemoveCartItem,
   useApplyCoupon,
   useRemoveCoupon,
+  usePreviewCoupon,
 } from "@/hooks/useCommerce";
 import { usePublicSiteSettings } from "@/hooks/useSiteSettings";
 import { usePublicCustomizations } from "@/hooks/useCustomizations";
@@ -36,6 +37,7 @@ import type {
   AddressInput,
   AppliedCoupon,
   CartCouponRejectionCode,
+  CouponPreview,
   MergeCartItem,
   PaymentMethod,
   ServerCart,
@@ -189,6 +191,7 @@ export function CheckoutClient() {
   const mergeMut = useMergeCart();
   const applyCouponMut = useApplyCoupon();
   const removeCouponMut = useRemoveCoupon();
+  const previewCouponMut = usePreviewCoupon();
 
   // Local-cart fallback. If the server cart is empty (or still loading the
   // login-merge), the local Zustand cart is the source of truth for what the
@@ -236,19 +239,29 @@ export function CheckoutClient() {
       }
       return;
     }
-    // No server cart to validate against yet - hold it and send it with the
-    // order itself, same as guest checkout always has to.
-    setManualCouponCode(code.toUpperCase());
-    toast({
-      title: "Coupon code saved",
-      description: "It'll be applied when you place your order.",
-      tone: "info",
-    });
-    setCouponInput("");
+    // No server cart to validate against yet - but we can still check the
+    // code for real against the public preview endpoint (same validateCoupon
+    // engine, just read-only) so the buyer sees the actual discount instead
+    // of a "trust me, it'll work at checkout" placeholder. The code is still
+    // held here and re-validated for real at order placement.
+    try {
+      const preview = await previewCouponMut.mutateAsync({
+        items: localItemsToMergePayload(localItems),
+        code,
+      });
+      setManualCouponCode(preview.code);
+      setManualCouponPreview(preview);
+      toast({ title: "Coupon applied", tone: "success" });
+      setCouponInput("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not apply coupon";
+      toast({ title: "Coupon failed", description: message, tone: "error" });
+    }
   };
   const onRemoveCoupon = () => {
     if (appliedCoupon) removeCouponMut.mutate();
     setManualCouponCode(null);
+    setManualCouponPreview(null);
   };
 
   const cart: ServerCart | undefined = usingLocal
@@ -267,6 +280,8 @@ export function CheckoutClient() {
   // real when the order is placed.
   const [couponInput, setCouponInput] = React.useState("");
   const [manualCouponCode, setManualCouponCode] = React.useState<string | null>(null);
+  /** The preview result backing manualCouponCode - set together, cleared together. */
+  const [manualCouponPreview, setManualCouponPreview] = React.useState<CouponPreview | null>(null);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
@@ -482,7 +497,7 @@ export function CheckoutClient() {
     subtotal,
     deliveryConfig,
   );
-  const discount = appliedCoupon?.discount ?? 0;
+  const discount = appliedCoupon?.discount ?? manualCouponPreview?.discount ?? 0;
   const total = Math.max(0, subtotal - discount) + shippingCost;
   const freeThreshold = deliveryConfig?.freeShippingThreshold ?? 0;
 
@@ -524,7 +539,7 @@ export function CheckoutClient() {
         onCouponInputChange={setCouponInput}
         onApplyCoupon={onApplyCoupon}
         onRemoveCoupon={onRemoveCoupon}
-        applyingCoupon={applyCouponMut.isPending}
+        applyingCoupon={applyCouponMut.isPending || previewCouponMut.isPending}
         subtotal={subtotal}
         discount={discount}
         shippingCost={shippingCost}
@@ -915,7 +930,10 @@ function OrderSummary({
         ) : manualCouponCode ? (
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <Row label={`Coupon (${manualCouponCode})`} value="Applied at checkout" muted />
+              <Row
+                label={`Coupon (${manualCouponCode})`}
+                value={`−${formatPrice(discount, cart.currency)}`}
+              />
             </div>
             <button
               type="button"

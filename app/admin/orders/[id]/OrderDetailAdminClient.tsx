@@ -497,6 +497,11 @@ export function OrderDetailAdminClient({ id }: { id: string }) {
           </div>
           <div className="text-[13px] text-gray-500">Total</div>
           <div className="text-[24px] font-bold tabular-nums text-gray-900">{formatMoney(order.total, order.currency)}</div>
+          {order.payment.advanceAmount && order.payment.advanceAmount > 0 ? (
+            <div className="text-[12px] font-medium text-gray-500">
+              Due {formatMoney(Math.max(0, order.total - order.payment.advanceAmount), order.currency)}
+            </div>
+          ) : null}
         </div>
       </header>
 

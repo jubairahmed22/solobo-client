@@ -993,6 +993,17 @@ function TotalsBlock({ order }: { order: AdminOrderDetail }) {
 
       {order.tax > 0 ? row("Tax", order.tax) : null}
       {row("Total", order.total, true)}
+
+      {/* Advance payment is edited in the Payment card, not here - this just
+          reflects it so the cashier doesn't have to cross-reference two
+          cards to see what's actually still owed. Mirrors the same two
+          rows on the printable invoice (OrderInvoice.tsx). */}
+      {order.payment.advanceAmount && order.payment.advanceAmount > 0 ? (
+        <>
+          {row("Advance paid", -order.payment.advanceAmount)}
+          {row("Balance due", Math.max(0, order.total - order.payment.advanceAmount), true)}
+        </>
+      ) : null}
     </div>
   );
 }

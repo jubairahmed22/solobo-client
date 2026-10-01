@@ -1482,20 +1482,6 @@ export function PosClient() {
               </label>
             ) : null}
             <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
-              Advance payment (optional)
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                value={advancePayment}
-                onChange={(e) => setAdvancePayment(e.target.value)}
-                placeholder="0"
-              />
-              <span className="text-[12px] font-normal text-gray-500">
-                Deposit already collected. The rest is recorded as the amount due on delivery.
-              </span>
-            </label>
-            <label className="flex flex-col gap-[8px] text-[14px] font-medium text-gray-900">
               Coupon code (optional)
               <Input
                 value={couponCode}
@@ -1590,6 +1576,26 @@ export function PosClient() {
                     {formatMoney(totalPreview)}
                   </dd>
                 </div>
+                {/* Advance payment - a deposit the customer already paid.
+                    Editable right here so the cashier sees Total, what's
+                    been collected, and what's left due in one place instead
+                    of hunting for the field in the Payment section above. */}
+                <div className="flex items-center justify-between gap-[8px]">
+                  <dt className="text-gray-500">Advance payment</dt>
+                  <dd>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      inputMode="decimal"
+                      aria-label="Advance payment"
+                      value={advancePayment}
+                      onChange={(e) => setAdvancePayment(e.target.value)}
+                      placeholder="0"
+                      className="h-[32px] w-[88px] rounded-[8px] border border-gray-300 bg-gray-50 px-[8px] text-right text-[14px] font-medium tabular-nums text-gray-900 focus:border-[#1A56DB] focus:bg-white focus:outline-none"
+                    />
+                  </dd>
+                </div>
                 {advancePaymentAmount > 0 ? (
                   <>
                     <div className="flex items-center justify-between">
@@ -1601,7 +1607,11 @@ export function PosClient() {
                       <dd className="font-semibold tabular-nums text-gray-900">{formatMoney(codDuePreview)}</dd>
                     </div>
                   </>
-                ) : null}
+                ) : (
+                  <p className="text-[12px] text-gray-500">
+                    Deposit already collected from the customer. The rest is recorded as the amount due on delivery.
+                  </p>
+                )}
               </dl>
             </div>
             <p className="mt-[12px] text-[12px] text-gray-500">

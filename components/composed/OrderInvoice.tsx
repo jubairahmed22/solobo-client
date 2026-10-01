@@ -57,6 +57,14 @@ export interface InvoiceTotals {
   total: number;
   currency: string;
   /**
+   * Deposit already collected from the customer (POS sale or edited later
+   * on the order detail page) - see Order model's `payment.advanceAmount`.
+   * When set and > 0, the invoice shows it subtracted from the total plus
+   * the resulting balance due, so a partially-paid order doesn't print as
+   * if the full total is still outstanding.
+   */
+  advancePaid?: number;
+  /**
    * When set, the invoice renders a small advisory under the total noting
    * this is the seller's slice of a multi-seller order with the full
    * order's grand total surfaced for transparency.
@@ -410,6 +418,25 @@ export function OrderInvoice({
               {formatMoney(totals.total, totals.currency)}
             </dd>
           </div>
+          {totals.advancePaid !== undefined && totals.advancePaid > 0 ? (
+            <>
+              <div className="flex justify-between">
+                <dt className="text-neutral-600">Advance paid</dt>
+                <dd className="tabular-nums">
+                  −{formatMoney(totals.advancePaid, totals.currency)}
+                </dd>
+              </div>
+              <div className="flex justify-between text-base font-semibold">
+                <dt>Balance due</dt>
+                <dd className="tabular-nums">
+                  {formatMoney(
+                    Math.max(0, totals.total - totals.advancePaid),
+                    totals.currency,
+                  )}
+                </dd>
+              </div>
+            </>
+          ) : null}
           {totals.fullOrderTotal !== undefined &&
           totals.fullOrderTotal !== totals.total ? (
             <div className="pt-0.5 text-right text-[11px] text-neutral-500">
