@@ -88,6 +88,19 @@ export function useRemoveCoupon() {
   });
 }
 
+/**
+ * Read-only coupon check for a guest/local cart - no server cart, no
+ * invalidation, nothing persisted. Lets checkout show the real discount for
+ * a manually-entered code before the order is actually placed, instead of
+ * the old "it'll be applied when you place your order" with no number.
+ */
+export function usePreviewCoupon() {
+  return useMutation({
+    mutationFn: ({ items, code }: PreviewCouponArgs) =>
+      orderApi.previewCoupon(items, code),
+  });
+}
+
 export function useMergeCart() {
   const qc = useQueryClient();
   return useMutation({
