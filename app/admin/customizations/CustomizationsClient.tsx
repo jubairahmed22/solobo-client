@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Label, Spinner } from "@/components/ui";
 import { AdminFormSkeleton } from "@/components/admin/Skeleton";
-import { uploadsApi, uploadToCloudinary } from "@/lib/api/uploads";
+import { uploadFile } from "@/lib/api/uploads";
 import { FormStickyBar } from "@/components/admin/FormStickyBar";
 import { useUIStore } from "@/store/uiStore";
 import {
@@ -99,9 +99,8 @@ function PatchEditor({
     setUploadError(null);
     setUploadProgress(0);
     try {
-      const sig = await uploadsApi.sign("product");
-      const result = await uploadToCloudinary(file, sig, setUploadProgress);
-      onChange({ ...draft, imageUrl: result.secure_url });
+      const result = await uploadFile(file, "product", setUploadProgress);
+      onChange({ ...draft, imageUrl: result.url });
     } catch {
       setUploadError("Upload failed - please try again.");
     } finally {
