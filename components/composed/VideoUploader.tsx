@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Film, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { uploadsApi, uploadToCloudinary, UploadError } from "@/lib/api/uploads";
+import { uploadsApi, uploadFile, UploadError } from "@/lib/api/uploads";
 import { useUIStore } from "@/store/uiStore";
 import type { UploadScope, UploadedVideo } from "@/types/uploads";
 import { cn } from "@/lib/utils/cn";
@@ -13,9 +13,9 @@ export interface VideoUploaderProps {
   value: UploadedVideo | null;
   /** Called with the new video after upload, or null on remove. */
   onChange: (next: UploadedVideo | null) => void;
-  /** Cloudinary subfolder scope. Defaults to "product". */
+  /** Storage subfolder scope. Defaults to "product". */
   scope?: UploadScope;
-  /** Max size in MB (Cloudinary free tier caps video at 100MB). */
+  /** Max size in MB (the server caps video at 150MB). */
   maxSizeMb?: number;
   /** Visual label rendered above the dropzone. */
   label?: string;
