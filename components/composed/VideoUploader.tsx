@@ -25,21 +25,9 @@ export interface VideoUploaderProps {
 }
 
 /**
- * Derive a poster (thumbnail) URL from a Cloudinary video URL: grab the
- * first frame (`so_0`) as a jpg. Falls back to undefined for non-Cloudinary
- * URLs so the <video> element just shows its own first frame.
- */
-function derivePosterUrl(videoUrl: string): string | undefined {
-  if (!videoUrl.includes("/video/upload/")) return undefined;
-  return videoUrl
-    .replace("/video/upload/", "/video/upload/so_0/")
-    .replace(/\.[a-z0-9]+$/i, ".jpg");
-}
-
-/**
- * Single-video uploader (browser → Cloudinary direct, same signed flow as
- * ImageUploader). One video per product: uploading a new one replaces the
- * old, and removal best-effort deletes the asset from Cloudinary.
+ * Single-video uploader. One video per product: uploading a new one replaces
+ * the old, and removal best-effort deletes the stored file. Without a poster
+ * the <video> element shows its own first frame.
  */
 export function VideoUploader({
   value,
@@ -75,16 +63,10 @@ export function VideoUploader({
     const previous = value;
     setProgress(0);
     try {
-      const sig = await uploadsApi.sign(scope, "video");
-      const result = await uploadToCloudinary(file, sig, setProgress);
-      onChange({
-        url: result.secure_url,
-        publicId: result.public_id,
-        posterUrl: derivePosterUrl(result.secure_url),
-        duration: result.duration,
-      });
+      const result = await uploadFile(file, scope, setProgress, "video");
+      onChange({ url: result.url, publicId: result.publicId });
       // Replacing? Clean up the old asset best-effort.
-      if (previous?.publicId && previous.publicId !== result.public_id) {
+      if (previous?.publicId && previous.publicId !== result.publicId) {
         uploadsApi.destroy(previous.publicId, "video").catch(() => {});
       }
     } catch (err) {
