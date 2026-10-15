@@ -1,11 +1,3 @@
-/**
- * Shapes for the Cloudinary direct-upload signing endpoint. The signature
- * lets the browser POST a file straight to Cloudinary without proxying it
- * through our Node process.
- *
- * `uploadUrl` is included so the frontend doesn't have to template the
- * Cloudinary URL itself - just POST FormData with the listed fields.
- */
 export type UploadScope =
   | "product"
   | "brand"
@@ -13,33 +5,18 @@ export type UploadScope =
   | "avatar"
   | "offer";
 
-/** Which Cloudinary endpoint the signed upload targets. */
 export type UploadResourceType = "image" | "video";
 
-export interface UploadSignature {
-  signature: string;
-  timestamp: number;
-  folder: string;
-  apiKey: string;
-  cloudName: string;
-  uploadUrl: string;
-}
-
-/**
- * Subset of Cloudinary's image-upload response we actually use. Cloudinary
- * sends a lot more (resource_type, format, transformations, …) but we only
- * care about the public id (for deletes) and the secure URL (for storage).
- */
-export interface CloudinaryUploadResult {
-  public_id: string;
-  secure_url: string;
+/** Response of `POST /api/uploads`. */
+export interface UploadResult {
+  url: string;
+  /** Storage path on the server, used for deletion. */
+  publicId: string;
   width?: number;
   height?: number;
   format?: string;
   bytes?: number;
-  original_filename?: string;
-  /** Video uploads only - length in seconds. */
-  duration?: number;
+  originalFilename?: string;
 }
 
 /**
@@ -49,18 +26,11 @@ export interface CloudinaryUploadResult {
 export interface UploadedImage {
   url: string;
   alt?: string;
-  /**
-   * Optional - we keep this around for "delete from Cloudinary on remove",
-   * but it's not required by the backend product schema.
-   */
+  /** Kept so removing an image can also delete the stored file. */
   publicId?: string;
 }
 
-/**
- * The single optional product video. Mirrors the backend Product `video`
- * subdoc. `posterUrl` is derived from the Cloudinary video URL (first frame
- * as jpg) so the storefront can show a thumbnail before playback.
- */
+/** The single optional product video. Mirrors the backend Product `video` subdoc. */
 export interface UploadedVideo {
   url: string;
   publicId?: string;
