@@ -7,8 +7,7 @@
  * a tiny CMS surface:
  *
  *  • Dropzone accepts multiple images at once → each upload becomes its
- *    own banner with sensible defaults, signed straight to Cloudinary so
- *    the Node process never sees the bytes.
+ *    own banner with sensible defaults.
  *  • Banner cards expose per-slide title / subtitle / CTA label + href,
  *    plus `isActive` and `fullWidth` toggles. The CTA href has a
  *    structured picker (Custom URL / Product / Category / This offer /
@@ -192,7 +191,7 @@ export function BannerCarouselManager({
     onChange(value.filter((_, i) => i !== index));
     if (target?.publicId) {
       // Best-effort: the banner's gone from the offer either way, but the
-      // Cloudinary asset would otherwise leak storage.
+      // stored file would otherwise leak disk space.
       uploadsApi.destroy(target.publicId).catch(() => {
         /* swallow */
       });
@@ -761,7 +760,7 @@ function BannerCard({
               value={banner.image}
               disabled={disabled}
               onChange={(e) => onChange({ image: e.target.value })}
-              placeholder="https://res.cloudinary.com/..."
+              placeholder="https://..."
             />
           </FieldRow>
           <FieldRow
