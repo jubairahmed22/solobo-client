@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Clipboard, GripVertical, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
-import { uploadsApi, uploadToCloudinary, UploadError } from "@/lib/api/uploads";
+import { uploadsApi, uploadFile, UploadError } from "@/lib/api/uploads";
 import { useUIStore } from "@/store/uiStore";
 import type { UploadScope, UploadedImage } from "@/types/uploads";
 import { cn } from "@/lib/utils/cn";
@@ -13,11 +13,11 @@ export interface ImageUploaderProps {
   value: UploadedImage[];
   /** Called with the next array on any add/remove/reorder/alt change. */
   onChange: (next: UploadedImage[]) => void;
-  /** Cloudinary subfolder scope. Defaults to "product". */
+  /** Storage subfolder scope. Defaults to "product". */
   scope?: UploadScope;
   /** Hard cap on how many images can be uploaded. */
   max?: number;
-  /** Max size in MB per file (Cloudinary's free tier caps at 10MB). */
+  /** Max size in MB per file (the server caps images at 20MB). */
   maxSizeMb?: number;
   /** Optional accept attribute override; defaults to images only. */
   accept?: string;
@@ -158,13 +158,12 @@ export function ImageUploader({
     await Promise.all(
       queued.map(async (p) => {
         try {
-          const sig = await uploadsApi.sign(scope);
-          const result = await uploadToCloudinary(p.file, sig, (pct) => {
+          const result = await uploadFile(p.file, scope, (pct) => {
             setPending((prev) =>
               prev.map((q) => (q.id === p.id ? { ...q, progress: pct } : q)),
             );
           });
-          onChange([...valueRef.current, { url: result.secure_url, publicId: result.public_id, alt: "" }]);
+          onChange([...valueRef.current, { url: result.url, publicId: result.publicId, alt: "" }]);
         } catch (err) {
           const message = err instanceof UploadError ? err.message : "Upload failed";
           setPending((prev) =>
