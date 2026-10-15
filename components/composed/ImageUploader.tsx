@@ -66,11 +66,8 @@ function extractImageFiles(data: DataTransfer | null): File[] {
  *  - Paste directly into the dropzone when it is focused
  *  - Drag-to-reorder existing images with a drop-position indicator line
  *  - Per-image alt text editing inline
- *  - Individual delete with best-effort Cloudinary cleanup
+ *  - Individual delete with best-effort server-side file cleanup
  *  - Per-file progress bars and error rows for failed uploads
- *
- * Uploads go directly to Cloudinary (browser → CDN) using a short-lived
- * server-signed URL so the backend never sees the binary data.
  */
 export function ImageUploader({
   value,
