@@ -39,18 +39,24 @@ export function OrderSuccessClient({ orderId }: OrderSuccessClientProps) {
   const isLoading = status === "loading" || (isAuthed && serverLoading);
   const isGuestOrder = !isAuthed || order?.isGuest === true;
 
-  // Fire the purchase conversion exactly once per order. The success page can
-  // be refreshed or revisited from order history, so we dedupe via a
-  // sessionStorage flag keyed on the order id - re-counting a sale would skew
-  // every revenue/attribution report downstream.
+  // A Purchase is a PAID order - the same rule the server follows (its
+  // Purchase fires only at the paid transition, see conversions.service.ts).
+  // Firing here for COD / pending gateway orders at placement double-counts:
+  // the server fires again days later when COD is collected, and that second
+  // event falls outside Meta's dedupe window. So a placed-but-unpaid order
+  // emits nothing from the browser.
+  //
+  // Dedupe across reloads, revisits and new tabs with a localStorage flag
+  // keyed on the order id. Pixel + CAPI share the eventID `order_<id>`, so
+  // anything that still slips through is collapsed by Meta.
   React.useEffect(() => {
-    if (!order) return;
+    if (!order || order.payment.status !== "paid") return;
     const key = `pm_purchase_tracked_${order._id}`;
     try {
-      if (window.sessionStorage.getItem(key)) return;
-      window.sessionStorage.setItem(key, "1");
+      if (window.localStorage.getItem(key)) return;
+      window.localStorage.setItem(key, "1");
     } catch {
-      /* storage blocked - accept best-effort de-dupe */
+      /* storage blocked - the server-side event and eventID dedupe still hold */
     }
     trackPurchase({
       orderId: order._id,

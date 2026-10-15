@@ -147,6 +147,13 @@ export interface AdminOrderSummary {
   payment: {
     status: PaymentStatus;
     method: string;
+    /** Deposit already collected - see Order model's `payment.advanceAmount`. */
+    advanceAmount?: number;
+  };
+  /** Present once the order has been dispatched to a courier. */
+  courier?: {
+    /** What the courier was actually told to collect at delivery - already advance-adjusted at dispatch time. */
+    codAmount?: number;
   };
   itemCount: number;
   /** True when any line has a paid customization (name/number print, patches) or a personalisation option. */

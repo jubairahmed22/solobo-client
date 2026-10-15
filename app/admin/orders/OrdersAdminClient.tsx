@@ -440,7 +440,7 @@ function OrderRow({ order, expanded, onToggleExpand }: OrderRowProps) {
   const customerEmail =
     order.email || (order.channel !== "pos" ? order.user?.email : undefined);
   const contact = [order.customerPhone, customerEmail].filter(Boolean).join(" · ");
-  const cod = codAmountFor(order);
+  const cod = codAmountFor(order, order.courier?.codAmount);
 
   return (
     <>
@@ -482,7 +482,7 @@ function OrderRow({ order, expanded, onToggleExpand }: OrderRowProps) {
             </span>
           </div>
           <p className="mt-[2px] pl-[20px] text-xs text-gray-500">
-            {formatMoney(order.total, order.currency)} · {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
+            {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
             {order.shippingDistrict ? ` · ${order.shippingDistrict}` : ""}
           </p>
         </td>
@@ -498,6 +498,15 @@ function OrderRow({ order, expanded, onToggleExpand }: OrderRowProps) {
             ) : null}
           </div>
           <p className="truncate text-xs text-gray-500">{contact || "—"}</p>
+        </td>
+
+        {/* Total Amount - the order's actual sale price, never reduced by an
+            advance payment (that's what the COD Amount column to the right
+            is for). */}
+        <td className="px-3 py-3 align-top text-right tabular-nums">
+          <span className="text-sm font-semibold text-gray-900">
+            {formatMoney(order.total, order.currency)}
+          </span>
         </td>
 
         {/* COD Amount - real cash-to-collect; "—" when not applicable (not COD). */}
@@ -544,7 +553,7 @@ function OrderRow({ order, expanded, onToggleExpand }: OrderRowProps) {
       </tr>
       {expanded ? (
         <tr className="bg-gray-50">
-          <td colSpan={7} className="px-3 py-4">
+          <td colSpan={8} className="px-3 py-4">
             <OrderExpandPanel orderId={order._id} />
           </td>
         </tr>
@@ -565,7 +574,7 @@ function OrderCardMobile({ order }: { order: AdminOrderSummary }) {
   const customerEmail =
     order.email || (order.channel !== "pos" ? order.user?.email : undefined);
   const contact = [order.customerPhone, customerEmail].filter(Boolean).join(" · ");
-  const cod = codAmountFor(order);
+  const cod = codAmountFor(order, order.courier?.codAmount);
   return (
     <Link
       href={`/admin/orders/${order._id}`}
@@ -810,6 +819,7 @@ export function OrdersAdminClient() {
                 <tr className="border-b border-neutral-100 bg-neutral-50">
                   <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Order</th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Customer</th>
+                  <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-400">Total Amount</th>
                   <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-neutral-400">COD Amount</th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Status</th>
                   <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">Payment</th>
