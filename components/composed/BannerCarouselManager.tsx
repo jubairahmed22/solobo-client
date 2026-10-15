@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Input, Label } from "@/components/ui";
 import { Select, type SelectOption } from "./Select";
-import { uploadsApi, uploadToCloudinary, UploadError } from "@/lib/api/uploads";
+import { uploadsApi, uploadFile, UploadError } from "@/lib/api/uploads";
 import { useUIStore } from "@/store/uiStore";
 import { catalogApi } from "@/lib/api/catalog";
 import { adminApi } from "@/lib/api/admin";
@@ -274,15 +274,14 @@ export function BannerCarouselManager({
     await Promise.all(
       queued.map(async (p) => {
         try {
-          const sig = await uploadsApi.sign("offer");
-          const result = await uploadToCloudinary(p.file, sig, (pct) => {
+          const result = await uploadFile(p.file, "offer", (pct) => {
             setPending((prev) =>
               prev.map((q) => (q.id === p.id ? { ...q, progress: pct } : q)),
             );
           });
           const nextBanner: BannerDraft = {
-            image: result.secure_url,
-            publicId: result.public_id,
+            image: result.url,
+            publicId: result.publicId,
             mobileImage: "",
             mobilePublicId: "",
             title: "",
@@ -1118,9 +1117,8 @@ function MobileImageUpload({ value, publicId, onChange, disabled }: MobileImageU
     }
     setUploading(true);
     try {
-      const sig = await uploadsApi.sign("offer");
-      const result = await uploadToCloudinary(file, sig, () => {});
-      onChange({ mobileImage: result.secure_url, mobilePublicId: result.public_id });
+      const result = await uploadFile(file, "offer");
+      onChange({ mobileImage: result.url, mobilePublicId: result.publicId });
     } catch (err) {
       const message = err instanceof UploadError ? err.message : "Upload failed";
       toast({ title: "Mobile image upload failed", description: message, tone: "error" });
