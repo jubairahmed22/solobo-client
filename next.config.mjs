@@ -8,6 +8,9 @@
  *
  * @type {import("next").NextConfig}
  */
+// Uploaded images are served by the backend under /uploads.
+const apiUrl = new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:50001");
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -15,18 +18,23 @@ const nextConfig = {
 
   images: {
     // Serve images exactly as uploaded — the Next.js optimizer was
-    // re-encoding Cloudinary originals to AVIF/WebP at ~75% quality, which
-    // visibly degraded product photos. Originals go straight to the browser.
+    // re-encoding originals to AVIF/WebP at ~75% quality, which visibly
+    // degraded product photos. Originals go straight to the browser.
     unoptimized: true,
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      { protocol: "https", hostname: "res.cloudinary.com" },
+      {
+        protocol: /** @type {"http" | "https"} */ (apiUrl.protocol.replace(":", "")),
+        hostname: apiUrl.hostname,
+        ...(apiUrl.port ? { port: apiUrl.port } : {}),
+        pathname: "/uploads/**",
+      },
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
       { protocol: "https", hostname: "platform-lookaside.fbsbx.com" },
     ],
     // Cache optimized images for a day rather than a minute — product imagery
-    // is effectively immutable (Cloudinary URLs are versioned by publicId), so
+    // is effectively immutable (upload URLs are unique per file), so
     // re-optimizing every 60s wasted CPU and slowed repeat LCP.
     minimumCacheTTL: 86400,
   },

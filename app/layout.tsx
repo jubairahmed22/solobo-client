@@ -16,6 +16,8 @@ const inter = Inter({
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+// Product images are served from the API host, so warm that connection early.
+const apiOrigin = new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:50001").origin;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -82,8 +84,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="" />
-        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="preconnect" href={apiOrigin} />
+        <link rel="dns-prefetch" href={apiOrigin} />
       </head>
       <body>
         <GoogleTagManager />
