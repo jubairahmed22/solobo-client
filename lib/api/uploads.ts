@@ -1,26 +1,11 @@
 import axios from "axios";
 import { apiClient } from "./client";
 import type { ApiResponse } from "@/types/api";
-import type {
-  CloudinaryUploadResult,
-  UploadResourceType,
-  UploadScope,
-  UploadSignature,
-} from "@/types/uploads";
+import type { UploadResourceType, UploadResult, UploadScope } from "@/types/uploads";
 
 /**
- * Upload helpers for direct-to-Cloudinary uploads.
- *
- * Flow:
- *   1. `signUpload(scope)` - hits our backend to get a short-lived signature
- *      bound to a per-user folder.
- *   2. `uploadToCloudinary(file, signature, onProgress?)` - POSTs the file
- *      directly to Cloudinary's image upload URL with the signature.
- *   3. Caller stores the returned `secure_url` (and optionally `public_id`)
- *      against the resource (product, brand, …).
- *
- * Errors are normalised to `UploadError` so the UI doesn't have to know the
- * difference between a 4xx from our signing endpoint and a Cloudinary error.
+ * Uploads go to our own backend (`POST /api/uploads`), which stores them on
+ * the VPS and returns a public URL plus a `publicId` used for deletion.
  */
 
 export class UploadError extends Error {
@@ -42,27 +27,13 @@ async function unwrap<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T>
       const body = err.response.data as { message?: string; code?: string };
       throw new UploadError(body.message ?? "Request failed", body.code ?? "ERROR");
     }
+    if (axios.isAxiosError(err)) throw new UploadError(err.message || "Upload failed");
     throw err;
   }
 }
 
 export const uploadsApi = {
-  /**
-   * Request a signed upload signature. `scope` decides the subfolder the
-   * asset lands in on Cloudinary - defaults to "product". Pass
-   * `resourceType: "video"` to target Cloudinary's video upload endpoint.
-   */
-  sign: (scope: UploadScope = "product", resourceType: UploadResourceType = "image") =>
-    unwrap<UploadSignature>(apiClient.post("/uploads/sign", { scope, resourceType })),
-
-  /**
-   * Delete an asset by its Cloudinary public id. The backend enforces that
-   * non-admins can only destroy assets inside their own per-user folder.
-   * Video assets must pass `resourceType: "video"` or Cloudinary won't find
-   * them (image is the default resource type).
-   *
-   * publicId is path-encoded so slashes survive the URL round-trip.
-   */
+  /** Delete a stored file. Non-admins may only delete their own uploads. */
   destroy: (publicId: string, resourceType: UploadResourceType = "image") =>
     unwrap<{ publicId: string; result: string }>(
       apiClient.delete(`/uploads/${encodeURIComponent(publicId)}`, {
@@ -71,47 +42,28 @@ export const uploadsApi = {
     ),
 };
 
-/**
- * POST a single image file directly to Cloudinary using the provided
- * signature. Returns the relevant subset of Cloudinary's response.
- *
- * `onProgress` receives a 0-100 percentage so the UI can render a real
- * progress bar - useful since SME sellers on mobile data are often
- * uploading 2-5MB phone photos.
- */
-export async function uploadToCloudinary(
+/** Upload one file; `onProgress` receives 0-100. */
+export function uploadFile(
   file: File,
-  sig: UploadSignature,
+  scope: UploadScope = "product",
   onProgress?: (pct: number) => void,
-): Promise<CloudinaryUploadResult> {
+  resourceType: UploadResourceType = "image",
+): Promise<UploadResult> {
   const form = new FormData();
+  form.append("scope", scope);
+  form.append("resourceType", resourceType);
   form.append("file", file);
-  form.append("api_key", sig.apiKey);
-  form.append("timestamp", String(sig.timestamp));
-  form.append("signature", sig.signature);
-  form.append("folder", sig.folder);
 
-  try {
-    const res = await axios.post<CloudinaryUploadResult>(sig.uploadUrl, form, {
-      // We're hitting Cloudinary directly here, so DON'T send our session
-      // cookie or our axios interceptor - withCredentials stays off and we
-      // use the bare axios import.
-      withCredentials: false,
+  return unwrap<UploadResult>(
+    apiClient.post("/uploads", form, {
+      // The client defaults to JSON (which would serialise the FormData) and a
+      // 15s timeout that phone uploads on mobile data can easily exceed.
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 0,
       onUploadProgress: (e) => {
         if (!onProgress || !e.total) return;
         onProgress(Math.round((e.loaded / e.total) * 100));
       },
-    });
-    return res.data;
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const cloudErr = err.response?.data as
-        | { error?: { message?: string } }
-        | undefined;
-      const message =
-        cloudErr?.error?.message ?? err.message ?? "Upload failed";
-      throw new UploadError(message, "CLOUDINARY_ERROR");
-    }
-    throw err;
-  }
+    }),
+  );
 }
